@@ -19,8 +19,12 @@ service cloud.firestore {
 
     // Contacts collection - only owner can access
     match /contacts/{docId} {
-      allow read, write: if request.auth != null &&
+      // Owner can read/update/delete their own contact docs
+      allow read, update, delete: if request.auth != null &&
         resource.data.userId == request.auth.uid;
+      // Allow creation when the userId in the NEW doc matches the requester
+      allow create: if request.auth != null &&
+        request.resource.data.userId == request.auth.uid;
     }
 
     // Invites - any authenticated user
