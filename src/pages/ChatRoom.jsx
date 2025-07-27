@@ -3,15 +3,12 @@ import { db, auth } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, doc, setDoc, getDocs } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Card, Button, Form, InputGroup, Image } from 'react-bootstrap';
+import { Container, Card, Button, Form, Image } from 'react-bootstrap';
 import '../components/FunTheme.css';
 
 function ChatRoom() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [otherUser, setOtherUser] = useState(null);
-  const [isTyping, setIsTyping] = useState(false);
-
   const messagesEndRef = useRef(null);
   const user = auth.currentUser;
   const navigate = useNavigate();
@@ -34,7 +31,8 @@ function ChatRoom() {
         const userQuery = query(collection(db, 'users'), where('uid', '==', userId));
         const userSnapshot = await getDocs(userQuery);
         if (!userSnapshot.empty) {
-          setOtherUser(userSnapshot.docs[0].data());
+          // Removed unused state variable
+          // setOtherUser(userSnapshot.docs[0].data());
         }
       } catch (error) {
         console.error('Error fetching user:', error);
