@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Container, Card, Button, Alert, Spinner } from 'react-bootstrap';
+import { onAuthStateChanged } from 'firebase/auth';
 
 function Invite() {
   const { inviteId } = useParams();
@@ -10,10 +11,19 @@ function Invite() {
   const [loading, setLoading] = useState(true);
   const [inviteData, setInviteData] = useState(null);
   const [error, setError] = useState('');
-  const user = auth.currentUser;
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+
+  // Wait for Firebase Auth to resolve current currentUser
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setCurrentUser(u);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (currentUser === null) return; // still loading auth
+    if (!currentUser) {
       navigate('/');
       return;
     }
@@ -49,15 +59,15 @@ function Invite() {
     };
 
     fetchInvite();
-  }, [inviteId, user, navigate]);
+  }, [inviteId, currentUser, navigate]);
 
   const handleJoinChat = async () => {
-    if (!inviteData || !user) return;
+    if (!inviteData || !currentUser) return;
 
     try {
-      // Save contact for both users
-      await saveContact(user.uid, inviteData.createdBy);
-      await saveContact(inviteData.createdBy, user.uid);
+      // Save contact for both currentUsers
+      await saveContact(currentUser.uid, inviteData.createdBy);
+      await saveContact(inviteData.createdBy, currentUser.uid);
 
       // Navigate to chat room
       navigate(`/chat/${inviteData.createdBy}`);
@@ -67,10 +77,10 @@ function Invite() {
     }
   };
 
-  const saveContact = async (userId, contactId) => {
-    const contactRef = doc(db, 'contacts', `${userId}_${contactId}`);
+  const saveContact = async (currentUserId, contactId) => {
+    const contactRef = doc(db, 'contacts', `${currentUserId}_${contactId}`);
     await setDoc(contactRef, {
-      userId,
+      currentUserId,
       contactId,
       addedAt: serverTimestamp(),
       lastChatAt: serverTimestamp()
