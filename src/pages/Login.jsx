@@ -32,7 +32,7 @@ function Login() {
     try {
       const result = await signInWithPopup(auth, provider);
       await saveUser(result.user);
-      navigate('/users');
+      navigate('/contacts');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -52,7 +52,7 @@ function Login() {
         const result = await signInWithEmailAndPassword(auth, email, password);
         await saveUser(result.user);
       }
-      navigate('/users');
+      navigate('/contacts');
     } catch (err) {
       setError(err.message);
     } finally {

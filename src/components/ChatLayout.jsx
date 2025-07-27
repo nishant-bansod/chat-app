@@ -161,14 +161,14 @@ const ChatLayout = ({ children, activeChat = null }) => {
             Contacts
           </button>
           <button 
-            onClick={() => navigate('/users')}
+            onClick={() => navigate('/contacts')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-              window.location.pathname === '/users' 
+              window.location.pathname === '/contacts' 
                 ? 'text-indigo-400 border-b-2 border-indigo-400' 
                 : 'text-gray-400 hover:text-gray-300'
             }`}
           >
-            All Users
+            Invite
           </button>
         </div>
 
@@ -180,7 +180,7 @@ const ChatLayout = ({ children, activeChat = null }) => {
               <div className="text-center py-8 text-gray-500">
                 <p className="text-sm">No recent chats</p>
                 <button 
-                  onClick={() => navigate('/users')}
+                  onClick={() => navigate('/contacts')}
                   className="mt-2 text-indigo-400 hover:text-indigo-300 text-sm"
                 >
                   Find people to chat with
@@ -239,7 +239,7 @@ const ChatLayout = ({ children, activeChat = null }) => {
             </svg>
           </button>
           <button 
-            onClick={() => navigate('/users')}
+            onClick={() => navigate('/contacts')}
             className="p-2 text-gray-500 hover:bg-gray-800 rounded-full transition-colors"
             title="Find Users"
           >

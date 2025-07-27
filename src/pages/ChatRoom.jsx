@@ -21,7 +21,7 @@ function ChatRoom() {
     }
 
     if (!userId) {
-      navigate('/users');
+      navigate('/contacts');
       return;
     }
 
@@ -136,7 +136,7 @@ function ChatRoom() {
   };
 
   const handleBackToUsers = () => {
-    navigate('/users');
+    navigate('/contacts');
   };
 
   return (

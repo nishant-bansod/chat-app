@@ -94,8 +94,8 @@ function Invite() {
         <Card>
           <Card.Body className="text-center">
             <Alert variant="danger">{error}</Alert>
-            <Button variant="primary" onClick={() => navigate('/users')}>
-              Go to Users
+            <Button variant="primary" onClick={() => navigate('/contacts')}>
+              Go to Contacts
             </Button>
           </Card.Body>
         </Card>
@@ -131,7 +131,7 @@ function Invite() {
             </Button>
             <Button 
               variant="outline-secondary"
-              onClick={() => navigate('/users')}
+              onClick={() => navigate('/contacts')}
             >
               Maybe Later
             </Button>

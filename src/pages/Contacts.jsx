@@ -120,9 +120,9 @@ function Contacts() {
             <Button 
               variant="outline-primary" 
               size="sm"
-              onClick={() => navigate('/users')}
+              onClick={() => navigate('/contacts')}
             >
-              Find Users
+              Invite Friends
             </Button>
           </div>
         </Card.Header>
@@ -144,9 +144,9 @@ function Contacts() {
               </p>
               <Button 
                 variant="primary"
-                onClick={() => navigate('/users')}
+                onClick={() => navigate('/contacts')}
               >
-                Start Chatting
+                Share Invite Link
               </Button>
             </div>
           ) : (
