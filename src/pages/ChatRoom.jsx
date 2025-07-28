@@ -1,14 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, doc, setDoc, getDocs } from 'firebase/firestore';
+import { 
+  collection, addDoc, query, orderBy, 
+  onSnapshot, serverTimestamp, where, 
+  doc, setDoc, getDocs, getDoc 
+} from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Card, Button, Form, Image } from 'react-bootstrap';
+import { Container, Card, Button, Form, Image, Spinner, Badge } from 'react-bootstrap';
+import { ArrowLeft, Send, Trash, Check2All } from 'react-bootstrap-icons';
 import '../components/FunTheme.css';
 
 function ChatRoom() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [otherUser, setOtherUser] = useState(null);
   const messagesEndRef = useRef(null);
   const user = auth.currentUser;
   const navigate = useNavigate();
@@ -28,18 +35,18 @@ function ChatRoom() {
     // Fetch other user's info
     const fetchOtherUser = async () => {
       try {
-        const userQuery = query(collection(db, 'users'), where('uid', '==', userId));
-        const userSnapshot = await getDocs(userQuery);
-        if (!userSnapshot.empty) {
-          // Removed unused state variable
-          // setOtherUser(userSnapshot.docs[0].data());
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          setOtherUser({ id: userDoc.id, ...userDoc.data() });
         }
       } catch (error) {
         console.error('Error fetching user:', error);
       }
     };
 
-    fetchOtherUser();
+    if (userId) {
+      fetchOtherUser();
+    }
 
     // Listen to messages
     const chatId = [user.uid, userId].sort().join('_');
@@ -65,8 +72,9 @@ function ChatRoom() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !userId) return;
+    if (!newMessage.trim() || !user || !userId || isSending) return;
     
+    setIsSending(true);
     const chatId = [user.uid, userId].sort().join('_');
     
     try {
@@ -74,22 +82,24 @@ function ChatRoom() {
         text: newMessage,
         createdAt: serverTimestamp(),
         uid: user.uid,
-        displayName: user.displayName || user.email,
+        displayName: user.displayName || user.email.split('@')[0],
         photoURL: user.photoURL || '',
         chatId,
         recipientId: userId,
+        status: 'sent'
       });
+      
+      // Update contact's last chat time
+      await updateContactLastChat(user.uid, userId);
+      await updateContactLastChat(userId, user.uid);
+      
+      setNewMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
-      alert(`Send failed: ${err.message}`);
-      return;
+      alert(`Failed to send message: ${err.message}`);
+    } finally {
+      setIsSending(false);
     }
-    
-    // Update contact's last chat time
-    await updateContactLastChat(user.uid, userId);
-    await updateContactLastChat(userId, user.uid);
-    
-    setNewMessage('');
   };
 
   const updateContactLastChat = async (userId, contactId) => {
@@ -139,125 +149,144 @@ function ChatRoom() {
     navigate('/contacts');
   };
 
+  // Format message time
+  const formatTime = (timestamp) => {
+    if (!timestamp?.toDate) return '';
+    return timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
-    <div className="fun-container">
-      <Container className="py-4" style={{ maxWidth: 800 }}>
-        <Card className="fun-card bounce-in">
-          <div className="fun-card-header">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center">
-                <Button className="btn-fun btn-fun-secondary me-3" onClick={handleBackToUsers}>
-                  🔙 Back to Buddies
-                </Button>
-                <div>
-                  <h4 className="fun-title mb-0">💬 Chat Time!</h4>
-                  <p className="fun-subtitle mb-0">Let the conversation flow ✨</p>
-                </div>
-              </div>
-              <div className="d-flex gap-2 align-items-center">
-                <Button 
-                  className="btn-fun btn-fun-accent"
-                  onClick={generateInviteLink}
-                  title="Generate shareable invite link"
-                >
-                  🔗 Share Magic Link
-                </Button>
-                <Button 
-                  className="btn-fun btn-fun-secondary"
-                  onClick={() => navigate('/contacts')}
-                >
-                  📞 Contacts
-                </Button>
-                {user && (
-                  <div className="d-flex align-items-center ms-3">
-                    <Image 
-                      src={user.photoURL || 'https://via.placeholder.com/40'} 
-                      alt="avatar" 
-                      width={40} 
-                      height={40} 
-                      className="avatar-fun me-2" 
-                    />
-                    <span className="text-white fw-bold me-3">
-                      {user.displayName || user.email}
-                    </span>
-                    <Button className="btn-fun btn-fun-accent" onClick={handleLogout}>
-                      👋 Logout
-                    </Button>
-                  </div>
-                )}
+    <Container className="chat-container py-0 px-0 h-100 d-flex flex-column">
+      <Card className="h-100 d-flex flex-column border-0 rounded-0">
+        {/* Chat Header */}
+        <Card.Header className="d-flex justify-content-between align-items-center bg-light py-3 border-bottom">
+          <div className="d-flex align-items-center">
+            <Button 
+              variant="link" 
+              onClick={() => navigate('/contacts')}
+              className="p-0 me-2"
+              aria-label="Back to contacts"
+            >
+              <ArrowLeft size={24} />
+            </Button>
+            <div className="d-flex align-items-center">
+              <Image 
+                src={otherUser?.photoURL || '/default-avatar.png'} 
+                roundedCircle 
+                width={40} 
+                height={40}
+                className="me-2"
+                alt={otherUser?.displayName || 'User'}
+              />
+              <div>
+                <h6 className="mb-0">{otherUser?.displayName || 'Loading...'}</h6>
+                <small className="text-muted">
+                  {otherUser?.status || 'Online'}
+                </small>
               </div>
             </div>
           </div>
-          
-          <Card.Body className="fun-scrollbar" style={{ height: '500px', overflowY: 'auto', padding: '2rem', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
-            {messages.length === 0 ? (
-              <div className="text-center py-5">
-                <div style={{fontSize: '3rem', marginBottom: '1rem'}}>💭</div>
-                <h5 style={{color: '#666'}}>Start the conversation!</h5>
-                <p style={{color: '#999'}}>Send your first message to break the ice 🧊</p>
-                <div style={{fontSize: '2rem', marginTop: '1rem'}}>🚀✨💫</div>
-              </div>
-            ) : (
-              messages.map((message, index) => (
+          <Button 
+            variant="outline-danger" 
+            size="sm" 
+            onClick={handleLogout}
+            className="d-flex align-items-center"
+            aria-label="Sign out"
+          >
+            <span className="d-none d-md-inline">Sign Out</span>
+          </Button>
+        </Card.Header>
+        
+        {/* Messages Area */}
+        <Card.Body className="chat-messages flex-grow-1 p-0" style={{ overflowY: 'auto', background: '#f8f9fa' }}>
+          {messages.length === 0 ? (
+            <div className="h-100 d-flex flex-column justify-content-center align-items-center text-center p-4">
+              <div className="mb-3" style={{ fontSize: '3rem' }}>💬</div>
+              <h5 className="text-muted mb-2">No messages yet</h5>
+              <p className="text-muted">Send your first message to start the conversation!</p>
+            </div>
+          ) : (
+            <div className="p-3">
+              {messages.map((msg) => (
                 <div 
-                  key={message.id} 
-                  className={`d-flex mb-4 ${message.uid === user.uid ? 'justify-content-end' : 'justify-content-start'}`}
-                  style={{animationDelay: `${index * 0.1}s`}}
+                  key={msg.id} 
+                  className={`d-flex mb-3 ${msg.uid === user.uid ? 'justify-content-end' : 'justify-content-start'}`}
                 >
-                  <div className={`message-bubble ${message.uid === user.uid ? 'message-bubble-sent' : 'message-bubble-received'}`}>
-                    <div className="d-flex align-items-center mb-2">
-                      <Image 
-                        src={message.photoURL || 'https://via.placeholder.com/24'} 
-                        alt="avatar" 
-                        width={24} 
-                        height={24} 
-                        className="avatar-fun me-2" 
-                        style={{width: '24px', height: '24px'}}
-                      />
-                      <small className={`fw-bold ${message.uid === user.uid ? 'text-white' : 'text-dark'}`}>
-                        {message.displayName} {message.uid === user.uid ? '🚀' : '💬'}
-                      </small>
-                    </div>
-                    <div style={{fontSize: '1rem', lineHeight: '1.4'}}>
-                      {message.text}
-                    </div>
-                    <div className="message-time text-end">
-                      {message.createdAt?.toDate().toLocaleTimeString()} ⏰
+                  {msg.uid !== user.uid && (
+                    <Image 
+                      src={msg.photoURL || '/default-avatar.png'} 
+                      roundedCircle 
+                      width={36} 
+                      height={36}
+                      className="me-2 align-self-end"
+                      alt={msg.displayName}
+                    />
+                  )}
+                  <div className="d-flex flex-column" style={{ maxWidth: '70%' }}>
+                    <div 
+                      className={`p-3 rounded-3 position-relative ${
+                        msg.uid === user.uid 
+                          ? 'bg-primary text-white' 
+                          : 'bg-white border'
+                      }`}
+                    >
+                      {msg.text}
+                      <div className="d-flex justify-content-between align-items-center mt-1">
+                        <small className={`${msg.uid === user.uid ? 'text-white-50' : 'text-muted'}`}>
+                          {formatTime(msg.createdAt)}
+                        </small>
+                        {msg.uid === user.uid && (
+                          <span className="ms-2">
+                            <Check2All size={16} className={msg.status === 'read' ? 'text-info' : 'text-white-50'} />
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </Card.Body>
-          
-          <Card.Footer style={{background: 'rgba(255, 255, 255, 0.9)', borderRadius: '0 0 20px 20px', padding: '1.5rem'}}>
-            <Form onSubmit={handleSend}>
-              <div className="d-flex gap-3 align-items-end">
-                <div className="flex-grow-1">
-                  <Form.Control
-                    className="form-control-fun"
-                    type="text"
-                    placeholder="Type something awesome... 🎉"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    style={{fontSize: '1rem', padding: '15px 20px'}}
-                  />
-                </div>
-                <Button 
-                  className="btn-fun btn-fun-primary" 
-                  type="submit"
-                  style={{padding: '15px 25px', fontSize: '1rem'}}
-                  disabled={!newMessage.trim()}
-                >
-                  🚀 Send
-                </Button>
-              </div>
-            </Form>
-          </Card.Footer>
-        </Card>
-      </Container>
-    </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </Card.Body>
+        
+        {/* Message Input */}
+        <Card.Footer className="border-top bg-white p-3">
+          <Form onSubmit={handleSend} className="d-flex gap-2">
+            <Form.Control
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-grow-1"
+              disabled={isSending}
+              aria-label="Type a message"
+            />
+            <Button 
+              variant="primary" 
+              type="submit"
+              disabled={!newMessage.trim() || isSending}
+              className="d-flex align-items-center justify-content-center"
+              style={{ width: '48px', height: '38px' }}
+              aria-label="Send message"
+            >
+              {isSending ? (
+                <Spinner animation="border" size="sm" role="status">
+                  <span className="visually-hidden">Sending...</span>
+                </Spinner>
+              ) : (
+                <Send size={18} />
+              )}
+            </Button>
+          </Form>
+        </Card.Footer>
+      </Card>
+    </Container>
   );
 }
 
