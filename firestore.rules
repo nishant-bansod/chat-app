@@ -45,5 +45,25 @@ service cloud.firestore {
     match /invites/{inviteId} {
       allow read, write: if request.auth != null;
     }
+    
+    // Contact Requests
+    match /contactRequests/{requestId} {
+      // Allow users to see requests they've sent or received
+      allow read: if request.auth != null && 
+        (resource.data.fromUid == request.auth.uid || 
+         resource.data.toUid == request.auth.uid);
+         
+      // Allow creating a request if you're the sender
+      allow create: if request.auth != null &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.status == 'pending';
+        
+      // Allow updating only if you're the recipient and only status field
+      allow update: if request.auth != null &&
+        resource.data.toUid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+        (request.resource.data.status == 'accepted' || 
+         request.resource.data.status == 'rejected');
+    }
   }
 }
