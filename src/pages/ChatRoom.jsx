@@ -7,9 +7,139 @@ import {
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Card, Button, Form, Image, Spinner } from 'react-bootstrap';
-import { ArrowLeft, Send, Check2All } from 'react-bootstrap-icons';
-import '../components/FunTheme.css';
+import { Container, Card, Button, Form, Image, Spinner, Badge } from 'react-bootstrap';
+import { ArrowLeft, Send, Check2All, PersonCircle, BoxArrowRight } from 'react-bootstrap-icons';
+import styled from 'styled-components';
+import { colors, shadows, borderRadius } from '../theme/colors';
+
+// Styled Components
+const ChatContainer = styled(Container)`
+  height: 100vh;
+  max-width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: ${colors.background};
+`;
+
+const ChatHeader = styled(Card.Header)`
+  background-color: ${colors.headerBackground};
+  border-bottom: 1px solid ${colors.border};
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: ${shadows.small};
+  z-index: 10;
+`;
+
+const MessageList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const MessageBubble = styled.div`
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: ${borderRadius.large};
+  position: relative;
+  word-wrap: break-word;
+  line-height: 1.4;
+  font-size: 0.95rem;
+  box-shadow: ${shadows.small};
+  
+  ${props => props.sent ? `
+    align-self: flex-end;
+    background-color: ${colors.chatBubbleSent};
+    color: ${colors.chatTextSent};
+    border-bottom-right-radius: ${borderRadius.small};
+  ` : `
+    align-self: flex-start;
+    background-color: ${colors.chatBubbleReceived};
+    color: ${colors.chatTextReceived};
+    border-bottom-left-radius: ${borderRadius.small};
+  `}
+`;
+
+const MessageTime = styled.span`
+  font-size: 0.7rem;
+  color: ${colors.chatTime};
+  display: block;
+  text-align: right;
+  margin-top: 4px;
+`;
+
+const MessageInputContainer = styled.div`
+  padding: 16px;
+  background-color: ${colors.background};
+  border-top: 1px solid ${colors.border};
+`;
+
+const SendButton = styled(Button)`
+  background-color: ${colors.primary};
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 10px;
+  
+  &:hover, &:focus {
+    background-color: ${colors.primaryDark};
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+const BackButton = styled(Button)`
+  background: none;
+  border: none;
+  color: ${colors.text};
+  padding: 8px;
+  margin-right: 10px;
+  
+  &:hover, &:focus {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: ${colors.text};
+  }
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const UserAvatar = styled(Image)`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+`;
+
+const UserName = styled.span`
+  font-weight: 600;
+  font-size: 1.1rem;
+`;
+
+const StatusBadge = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4caf50;
+  margin-right: 6px;
+`;
 
 function ChatRoom() {
   const [messages, setMessages] = useState([]);
@@ -50,24 +180,48 @@ function ChatRoom() {
 
     // Listen to messages
     const chatId = [user.uid, userId].sort().join('_');
-    const q = query(
-      collection(db, 'messages'), 
-      where('chatId', '==', chatId),
-      orderBy('createdAt')
-    );
+    console.log('Setting up message listener for chatId:', chatId);
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs = [];
-      querySnapshot.forEach((doc) => {
-        msgs.push({ id: doc.id, ...doc.data() });
-      });
-      setMessages(msgs);
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    });
-
-    return unsubscribe;
+    try {
+      const q = query(
+        collection(db, 'messages'), 
+        where('chatId', '==', chatId),
+        orderBy('createdAt')
+      );
+      
+      const unsubscribe = onSnapshot(
+        q, 
+        (querySnapshot) => {
+          console.log('Received message update:', querySnapshot.docs.length, 'messages');
+          const msgs = [];
+          querySnapshot.forEach((doc) => {
+            console.log('Message data:', doc.id, doc.data());
+            msgs.push({ id: doc.id, ...doc.data() });
+          });
+          setMessages(msgs);
+          
+          // Scroll to bottom after messages are rendered
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 100);
+        },
+        (error) => {
+          console.error('Error in message listener:', error);
+          // Show error to user
+          alert('Error loading messages. Please refresh the page.');
+        }
+      );
+      
+      return () => {
+        console.log('Cleaning up message listener');
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error('Error setting up message listener:', error);
+      return () => {}; // Return empty cleanup function
+    }
   }, [user, userId, navigate]);
 
   const handleSend = async (e) => {
@@ -78,8 +232,9 @@ function ChatRoom() {
     const chatId = [user.uid, userId].sort().join('_');
     
     try {
-      await addDoc(collection(db, 'messages'), {
-        text: newMessage,
+      console.log('Sending message with chatId:', chatId);
+      const messageData = {
+        text: newMessage.trim(),
         createdAt: serverTimestamp(),
         uid: user.uid,
         displayName: user.displayName || user.email.split('@')[0],
@@ -87,18 +242,30 @@ function ChatRoom() {
         chatId,
         recipientId: userId,
         status: 'sent'
-      });
+      };
+      console.log('Message data:', messageData);
+      
+      const docRef = await addDoc(collection(db, 'messages'), messageData);
+      console.log('Message sent with ID:', docRef.id);
       
       // Update contact's last chat time
-      await updateContactLastChat(user.uid, userId);
-      await updateContactLastChat(userId, user.uid);
+      console.log('Updating last chat time...');
+      await Promise.all([
+        updateContactLastChat(user.uid, userId),
+        updateContactLastChat(userId, user.uid)
+      ]);
+      console.log('Contact timestamps updated');
       
       setNewMessage('');
     } catch (err) {
-      console.error('Error sending message:', err);
-      alert(`Failed to send message: ${err.message}`);
+      console.error('Error sending message:', {
+        error: err,
+        message: err.message,
+        stack: err.stack
+      });
+      alert(`Failed to send message: ${err.message}. Please check the console for details.`);
     } finally {
-      setIsSending(false);
+      setIsSaving(false);
     }
   };
 
@@ -136,133 +303,115 @@ function ChatRoom() {
   }, [messages]);
 
   return (
-    <Container className="chat-container py-0 px-0 h-100 d-flex flex-column">
+    <ChatContainer fluid>
       <Card className="h-100 d-flex flex-column border-0 rounded-0">
         {/* Chat Header */}
-        <Card.Header className="d-flex justify-content-between align-items-center bg-light py-3 border-bottom">
+        <ChatHeader>
           <div className="d-flex align-items-center">
-            <Button 
-              variant="link" 
+            <BackButton 
               onClick={() => navigate('/contacts')}
-              className="p-0 me-2"
               aria-label="Back to contacts"
             >
               <ArrowLeft size={24} />
-            </Button>
-            <div className="d-flex align-items-center">
-              <Image 
-                src={otherUser?.photoURL || '/default-avatar.png'} 
-                roundedCircle 
-                width={40} 
-                height={40}
-                className="me-2"
-                alt={otherUser?.displayName || 'User'}
-              />
-              <div>
-                <h6 className="mb-0">{otherUser?.displayName || 'Loading...'}</h6>
-                <small className="text-muted">
-                  {otherUser?.status || 'Online'}
-                </small>
-              </div>
-            </div>
-          </div>
-          <Button 
-            variant="outline-danger" 
-            size="sm" 
-            onClick={handleLogout}
-            className="d-flex align-items-center"
-            aria-label="Sign out"
-          >
-            <span className="d-none d-md-inline">Sign Out</span>
-          </Button>
-        </Card.Header>
-        
-        {/* Messages Area */}
-        <Card.Body className="chat-messages flex-grow-1 p-0" style={{ overflowY: 'auto', background: '#f8f9fa' }}>
-          {messages.length === 0 ? (
-            <div className="h-100 d-flex flex-column justify-content-center align-items-center text-center p-4">
-              <div className="mb-3" style={{ fontSize: '3rem' }}>💬</div>
-              <h5 className="text-muted mb-2">No messages yet</h5>
-              <p className="text-muted">Send your first message to start the conversation!</p>
-            </div>
-          ) : (
-            <div className="p-3">
-              {messages.map((msg) => (
-                <div 
-                  key={msg.id} 
-                  className={`d-flex mb-3 ${msg.uid === user.uid ? 'justify-content-end' : 'justify-content-start'}`}
-                >
-                  {msg.uid !== user.uid && (
-                    <Image 
-                      src={msg.photoURL || '/default-avatar.png'} 
-                      roundedCircle 
-                      width={36} 
-                      height={36}
-                      className="me-2 align-self-end"
-                      alt={msg.displayName}
-                    />
-                  )}
-                  <div className="d-flex flex-column" style={{ maxWidth: '70%' }}>
-                    <div 
-                      className={`p-3 rounded-3 position-relative ${
-                        msg.uid === user.uid 
-                          ? 'bg-primary text-white' 
-                          : 'bg-white border'
-                      }`}
-                    >
-                      {msg.text}
-                      <div className="d-flex justify-content-between align-items-center mt-1">
-                        <small className={`${msg.uid === user.uid ? 'text-white-50' : 'text-muted'}`}>
-                          {formatTime(msg.createdAt)}
-                        </small>
-                        {msg.uid === user.uid && (
-                          <span className="ms-2">
-                            <Check2All size={16} className={msg.status === 'read' ? 'text-info' : 'text-white-50'} />
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            </BackButton>
+            {otherUser && (
+              <UserInfo>
+                {otherUser.photoURL ? (
+                  <UserAvatar 
+                    src={otherUser.photoURL} 
+                    alt={otherUser.displayName || 'User'}
+                  />
+                ) : (
+                  <PersonCircle size={36} color={colors.textSecondary} />
+                )}
+                <div>
+                  <UserName>{otherUser.displayName || 'User'}</UserName>
+                  <div className="small" style={{ color: colors.textSecondary }}>
+                    <StatusBadge /> Online
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
+              </UserInfo>
+            )}
+          </div>
+          <Button 
+            variant="link" 
+            onClick={handleLogout}
+            style={{ color: colors.text }}
+            aria-label="Sign out"
+            className="p-1"
+          >
+            <BoxArrowRight size={22} />
+          </Button>
+        </ChatHeader>
+
+        {/* Messages */}
+        <MessageList>
+          {messages.length === 0 ? (
+            <div className="h-100 d-flex flex-column justify-content-center align-items-center" style={{ color: colors.textSecondary }}>
+              <div className="mb-2">No messages yet</div>
+              <small>Start the conversation!</small>
             </div>
+          ) : (
+            messages.map((msg) => (
+              <MessageBubble 
+                key={msg.id} 
+                sent={msg.uid === user.uid}
+              >
+                {msg.text}
+                <MessageTime>
+                  {msg.createdAt?.toDate ? formatTime(msg.createdAt) : 'Sending...'}
+                  {msg.uid === user.uid && (
+                    <Check2All size={12} className="ms-1" />
+                  )}
+                </MessageTime>
+              </MessageBubble>
+            ))
           )}
-        </Card.Body>
-        
+          <div ref={messagesEndRef} />
+        </MessageList>
+
         {/* Message Input */}
-        <Card.Footer className="border-top bg-white p-3">
-          <Form onSubmit={handleSend} className="d-flex gap-2">
+        <MessageInputContainer>
+          <Form onSubmit={handleSend} className="d-flex">
             <Form.Control
+              as="input"
               type="text"
+              placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-grow-1"
-              disabled={isSending}
-              aria-label="Type a message"
+              className="rounded-pill me-2"
+              style={{
+                padding: '10px 20px',
+                border: `1px solid ${colors.border}`,
+                backgroundColor: colors.background,
+                color: colors.text,
+                boxShadow: 'none'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = colors.primary;
+                e.target.style.boxShadow = `0 0 0 2px ${colors.primary}33`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = colors.border;
+                e.target.style.boxShadow = 'none';
+              }}
             />
-            <Button 
-              variant="primary" 
-              type="submit"
-              disabled={!newMessage.trim() || isSending}
-              className="d-flex align-items-center justify-content-center"
-              style={{ width: '48px', height: '38px' }}
+            <SendButton 
+              type="submit" 
+              disabled={!newMessage.trim() || isSaving}
               aria-label="Send message"
             >
-              {isSending ? (
-                <Spinner animation="border" size="sm" role="status">
-                  <span className="visually-hidden">Sending...</span>
-                </Spinner>
+              {isSaving ? (
+                <Spinner animation="border" size="sm" style={{ color: colors.text }} />
               ) : (
-                <Send size={18} />
+                <Send size={18} color={colors.text} />
               )}
-            </Button>
+            </SendButton>
           </Form>
-        </Card.Footer>
+        </MessageInputContainer>
       </Card>
-    </Container>
+    </ChatContainer>
   );
-}
+};
 
 export default ChatRoom;

@@ -1,14 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Messages collection - only sender or recipient can read.
+    // Messages collection - allow querying by chatId and ensure proper access
     match /messages/{messageId} {
-      allow read: if request.auth != null &&
-        (resource.data.uid == request.auth.uid ||
-         resource.data.recipientId == request.auth.uid);
-      // Sender writes message as themselves
+      // Helper function to check if user is part of the chat
+      function isParticipant(chatId) {
+        // Chat ID format: "user1_user2" (sorted)
+        return chatId.matches('^' + request.auth.uid + '_.*$') || 
+               chatId.matches('^.*_' + request.auth.uid + '$');
+      }
+      
+      // Allow read if user is part of the chat
+      allow read: if request.auth != null && 
+        isParticipant(resource.data.chatId);
+        
+      // Allow create if user is authenticated and the message is from them
       allow create: if request.auth != null &&
-        request.resource.data.uid == request.auth.uid;
+        request.auth.uid == request.resource.data.uid &&
+        isParticipant(request.resource.data.chatId);
+        
+      // Allow listing messages for a chat
+      allow list: if request.auth != null &&
+        request.query.where.chatId.stringValue != null &&
+        isParticipant(request.query.where.chatId.stringValue);
     }
 
     // Users collection - public profiles
