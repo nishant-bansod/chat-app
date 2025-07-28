@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Container, Card, Button, ListGroup, Image, InputGroup, Form, Badge } from 'react-bootstrap';
+import { Trash, ChatLeftText, PersonPlus } from 'react-bootstrap-icons';
 import '../components/FunTheme.css';
 import AddContactModal from '../components/AddContactModal';
 
@@ -97,6 +98,19 @@ function Contacts() {
     }, { merge: true });
   };
 
+  const removeContact = async (contactId) => {
+    if (!window.confirm('Remove this contact?')) return;
+    try {
+      const contactRef = doc(db, 'contacts', `${currentUser.uid}_${contactId}`);
+      await deleteDoc(contactRef);
+      // Optional: Also remove from filteredContacts for instant UI update
+      setFilteredContacts(prev => prev.filter(c => c.contactId !== contactId));
+    } catch (e) {
+      console.error('Failed to remove contact', e);
+      alert('Error removing contact');
+    }
+  };
+
   // respond to a request
   const respondRequest = async (req, status) => {
     try {
@@ -158,7 +172,7 @@ function Contacts() {
               className="me-2"
               onClick={generateInviteLink}
             >
-              📋 Share Link
+              <PersonPlus className="me-1" /> Share Link
             </Button>
             <Button 
                variant="outline-primary" 
@@ -235,8 +249,18 @@ function Contacts() {
                       </small>
                     </div>
                   </div>
-                  <div>
-                    <Badge bg="primary">💬</Badge>
+                  <div className="d-flex align-items-center">
+                    <Button 
+                      variant="link" 
+                      className="text-danger p-0 me-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeContact(contact.contactId);
+                      }}
+                    >
+                      <Trash size={16} />
+                    </Button>
+                    <ChatLeftText className="text-primary" size={20} />
                   </div>
                 </ListGroup.Item>
               ))}

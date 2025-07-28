@@ -65,9 +65,8 @@ function Invite() {
     if (!inviteData || !currentUser) return;
 
     try {
-      // Save contact for both currentUsers
+      // Save contact for invitee (currentUser) only; inviter will get contact after first message
       await saveContact(currentUser.uid, inviteData.createdBy);
-      await saveContact(inviteData.createdBy, currentUser.uid);
 
       // Navigate to chat room
       navigate(`/chat/${inviteData.createdBy}`);
@@ -77,10 +76,10 @@ function Invite() {
     }
   };
 
-  const saveContact = async (currentUserId, contactId) => {
-    const contactRef = doc(db, 'contacts', `${currentUserId}_${contactId}`);
+  const saveContact = async (userId, contactId) => {
+    const contactRef = doc(db, 'contacts', `${userId}_${contactId}`);
     await setDoc(contactRef, {
-      currentUserId,
+      userId,
       contactId,
       addedAt: serverTimestamp(),
       lastChatAt: serverTimestamp()
