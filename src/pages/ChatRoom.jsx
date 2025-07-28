@@ -3,12 +3,12 @@ import { db, auth } from '../firebase';
 import { 
   collection, addDoc, query, orderBy, 
   onSnapshot, serverTimestamp, where, 
-  doc, setDoc, getDocs, getDoc 
+  doc, setDoc, getDoc 
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Card, Button, Form, Image, Spinner, Badge } from 'react-bootstrap';
-import { ArrowLeft, Send, Trash, Check2All } from 'react-bootstrap-icons';
+import { Container, Card, Button, Form, Image, Spinner } from 'react-bootstrap';
+import { ArrowLeft, Send, Check2All } from 'react-bootstrap-icons';
 import '../components/FunTheme.css';
 
 function ChatRoom() {
@@ -115,39 +115,14 @@ function ChatRoom() {
     }
   };
 
-  const generateInviteLink = async () => {
-    try {
-      const inviteId = Math.random().toString(36).substring(2, 15);
-      const inviteData = {
-        id: inviteId,
-        createdBy: user.uid,
-        creatorName: user.displayName || user.email,
-        creatorPhoto: user.photoURL || '',
-        createdAt: serverTimestamp(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      };
-
-      await setDoc(doc(db, 'invites', inviteId), inviteData);
-      
-      const inviteLink = `${window.location.origin}/invite/${inviteId}`;
-      
-      await navigator.clipboard.writeText(inviteLink);
-      alert('Invite link copied to clipboard! Share it with anyone to start chatting.');
-      
-    } catch (error) {
-      console.error('Error generating invite link:', error);
-      alert('Error generating invite link');
-    }
-  };
+  // Removed unused generateInviteLink function
 
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/');
   };
 
-  const handleBackToUsers = () => {
-    navigate('/contacts');
-  };
+  // Removed unused handleBackToUsers function
 
   // Format message time
   const formatTime = (timestamp) => {

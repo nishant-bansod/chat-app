@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, orderBy, onSnapshot, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Container, Card, Button, ListGroup, Image, InputGroup, Form, Badge } from 'react-bootstrap';
 import { Trash, ChatLeftText, PersonPlus } from 'react-bootstrap-icons';
@@ -33,8 +33,6 @@ function Contacts() {
     );
     
     const unsubscribeContacts = onSnapshot(contactsQuery, async (snapshot) => {
-      const updatedContacts = [];
-      
       // Process each contact in parallel
       const contactPromises = snapshot.docs.map(async (contactDoc) => {
         const contactData = contactDoc.data();
@@ -64,9 +62,6 @@ function Contacts() {
       setLoading(false);
     });
     
-    // Clean up the listener on component unmount
-    return () => unsubscribeContacts();
-
     // Subscribe to pending friend requests
     const requestsQuery = query(
       collection(db, 'contactRequests'),
@@ -82,6 +77,7 @@ function Contacts() {
     
     // Clean up all listeners on unmount
     return () => {
+      unsubscribeContacts();
       unsubscribeRequests();
     };
    }, [currentUser, navigate]);
