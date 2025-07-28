@@ -265,7 +265,7 @@ function ChatRoom() {
       });
       alert(`Failed to send message: ${err.message}. Please check the console for details.`);
     } finally {
-      setIsSaving(false);
+      setIsSending(false);
     }
   };
 
@@ -398,10 +398,10 @@ function ChatRoom() {
             />
             <SendButton 
               type="submit" 
-              disabled={!newMessage.trim() || isSaving}
+              disabled={!newMessage.trim() || isSending}
               aria-label="Send message"
             >
-              {isSaving ? (
+              {isSending ? (
                 <Spinner animation="border" size="sm" style={{ color: colors.text }} />
               ) : (
                 <Send size={18} color={colors.text} />
