@@ -3,7 +3,7 @@ import { auth, provider, db } from '../firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, Alert, InputGroup } from 'react-bootstrap';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import styled from 'styled-components';
 import { FaGoogle, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowRight } from 'react-icons/fa';
 import { colors, shadows, borderRadius } from '../theme/colors';
@@ -169,21 +169,29 @@ const PasswordToggle = styled(Button)`
 function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Store user in Firestore
+  // Store minimal user data in Firestore
   const saveUser = async (user) => {
     if (!user) return;
-    await setDoc(doc(db, 'users', user.uid), {
+    
+    // Only save essential data during login/registration
+    const userData = {
       uid: user.uid,
-      displayName: user.displayName || email,
       email: user.email,
+      displayName: user.displayName || user.email.split('@')[0],
       photoURL: user.photoURL || '',
-    }, { merge: true });
+      createdAt: new Date().toISOString()
+    };
+    
+    // Username will be set in the UsernameSetup component
+    await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+    return userData;
   };
 
   const handleGoogleLogin = async () => {
@@ -192,9 +200,11 @@ function Login() {
     try {
       const result = await signInWithPopup(auth, provider);
       await saveUser(result.user);
+      // The ProtectedRoute will handle redirection to username setup if needed
       navigate('/contacts');
     } catch (err) {
-      setError(err.message);
+      console.error('Google login error:', err);
+      setError(err.message || 'Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
@@ -203,6 +213,12 @@ function Login() {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError('');
+    
+    if (isRegister && (!email || !password)) {
+      setError('Please enter both email and password');
+      return;
+    }
+    
     setLoading(true);
     try {
       if (isRegister) {
@@ -212,9 +228,11 @@ function Login() {
         const result = await signInWithEmailAndPassword(auth, email, password);
         await saveUser(result.user);
       }
+      // The ProtectedRoute will handle redirection to username setup if needed
       navigate('/contacts');
     } catch (err) {
-      setError(err.message);
+      console.error('Email login error:', err);
+      setError(err.message || 'Failed to sign in. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -240,7 +258,19 @@ function Login() {
         <Divider><span>OR</span></Divider>
         
         <StyledForm onSubmit={handleEmailLogin}>
-          <FormGroup controlId="formBasicEmail">
+          {isRegister && (
+            <FormGroup controlId="formBasicUsername" className="mb-3">
+              <FormLabel>Username</FormLabel>
+              <StyledInput 
+                type="text" 
+                placeholder="Choose a username" 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+              />
+            </FormGroup>
+          )}
+          <FormGroup controlId="formBasicEmail" className="mb-3">
             <FormLabel>
               <FaEnvelope /> Email Address
             </FormLabel>

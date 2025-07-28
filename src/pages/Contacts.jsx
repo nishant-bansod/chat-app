@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { InputGroup, Button } from 'react-bootstrap';
-import { FiTrash2, FiUserPlus, FiSearch, FiCheck, FiX } from 'react-icons/fi';
+import { FiTrash2, FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
 import {
   ContactsContainer,
@@ -45,6 +45,7 @@ const Contacts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [requests, setRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const currentUser = auth.currentUser;
@@ -175,42 +176,158 @@ const Contacts = () => {
       setLoading(false);
     });
 
-    // Set up real-time listener for contact requests
-    const requestsQuery = query(
+    // Fetch incoming contact requests
+    const incomingQuery = query(
       collection(db, 'contactRequests'),
       where('toUid', '==', currentUser.uid),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'pending')
     );
 
-    const unsubscribeRequests = onSnapshot(requestsQuery, async (snapshot) => {
-      const requestPromises = snapshot.docs.map(async (requestDoc) => {
-        const requestData = requestDoc.data();
-        try {
-          const userDoc = await getDoc(doc(db, 'users', requestData.fromUid));
-          if (userDoc.exists()) {
-            return {
-              id: requestDoc.id,
-              ...requestData,
-              userInfo: userDoc.data()
-            };
-          }
-        } catch (error) {
-          console.error('Error fetching requester data:', error);
-        }
-        return null;
+    const unsubscribeIncoming = onSnapshot(incomingQuery, (snapshot) => {
+      const requestsList = [];
+      snapshot.forEach((doc) => {
+        requestsList.push({ id: doc.id, ...doc.data(), type: 'incoming' });
       });
-
-      const resolvedRequests = (await Promise.all(requestPromises)).filter(Boolean);
-      setRequests(resolvedRequests);
+      setRequests(requestsList);
     });
 
-    // Clean up listeners
+    // Fetch sent contact requests
+    const sentQuery = query(
+      collection(db, 'contactRequests'),
+      where('fromUid', '==', currentUser.uid)
+    );
+
+    const unsubscribeSent = onSnapshot(sentQuery, (snapshot) => {
+      const sentList = [];
+      snapshot.forEach((doc) => {
+        sentList.push({ id: doc.id, ...doc.data(), type: 'sent' });
+      });
+      setSentRequests(sentList);
+    });
+
     return () => {
       unsubscribeContacts();
-      unsubscribeRequests();
+      unsubscribeIncoming();
+      unsubscribeSent();
     };
   }, [currentUser, navigate]);
+
+  // Get status for a contact
+  const getContactStatus = (contactId) => {
+    const sentRequest = sentRequests.find(req => req.toUid === contactId);
+    if (sentRequest) {
+      return {
+        status: sentRequest.status,
+        message: sentRequest.status === 'pending' ? 'Request sent' : 
+                sentRequest.status === 'accepted' ? 'Contact added' : 'Request declined'
+      };
+    }
+    return null;
+  };
+
+  // Get status icon
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending':
+        return <FiClock className="text-warning" />;
+      case 'accepted':
+        return <FiUserCheck className="text-success" />;
+      case 'rejected':
+        return <FiUserX className="text-danger" />;
+      default:
+        return null;
+    }
+  };
+
+  // Render contact list
+  const renderContactList = () => {
+    if (loading) {
+      return <div className="text-center my-4">Loading contacts...</div>;
+    }
+
+    if (filteredContacts.length === 0) {
+      return (
+        <EmptyState>
+          <p>No contacts found</p>
+          <Button variant="primary" onClick={() => setShowAdd(true)}>
+            <FiUserPlus /> Add Contact
+          </Button>
+        </EmptyState>
+      );
+    }
+
+    return (
+      <ContactList>
+        {requests.length > 0 && (
+          <div className="p-3 border-bottom">
+            <h6 className="text-muted mb-2">Contact Requests</h6>
+            {requests.map((request) => (
+              <ContactItem key={request.id}>
+                <ContactAvatar 
+                  src={request.userInfo?.photoURL || '/default-avatar.png'} 
+                  alt={request.userInfo?.displayName}
+                  roundedCircle
+                />
+                <ContactInfo>
+                  <ContactName>{request.userInfo?.displayName || 'Unknown User'}</ContactName>
+                  <LastMessage>Wants to connect with you</LastMessage>
+                </ContactInfo>
+                <div className="d-flex">
+                  <ActionButton 
+                    onClick={() => respondRequest(request, 'accepted')}
+                    title="Accept"
+                    className="text-success"
+                  >
+                    <FiCheck size={20} />
+                  </ActionButton>
+                  <ActionButton 
+                    onClick={() => respondRequest(request, 'rejected')}
+                    title="Reject"
+                    className="text-danger"
+                  >
+                    <FiX size={20} />
+                  </ActionButton>
+                </div>
+              </ContactItem>
+            ))}
+          </div>
+        )}
+        {filteredContacts.map((contact) => (
+          <ContactItem 
+            key={contact.id} 
+            onClick={() => navigate(`/chat/${contact.contactId}`)}
+          >
+            <ContactAvatar 
+              src={contact.userInfo?.photoURL || '/default-avatar.png'} 
+              alt={contact.userInfo?.displayName}
+              roundedCircle
+            />
+            <ContactInfo>
+              <div className="d-flex align-items-center">
+                <ContactName>{contact.userInfo?.displayName || 'Unknown User'}</ContactName>
+                {getContactStatus(contact.contactId) && (
+                  <span className="ms-2" title={getContactStatus(contact.contactId).message}>
+                    {getStatusIcon(getContactStatus(contact.contactId).status)}
+                  </span>
+                )}
+              </div>
+              {contact.lastMessage && (
+                <LastMessage>{contact.lastMessage}</LastMessage>
+              )}
+              {getContactStatus(contact.contactId) && (
+                <small className="text-muted">
+                  {getContactStatus(contact.contactId).message}
+                </small>
+              )}
+            </ContactInfo>
+            {contact.lastChatAt && (
+              <TimeAgo>{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
+            )}
+          </ContactItem>
+        ))}
+      </ContactList>
+    );
+  };
 
   // Render the component
   return (
@@ -236,102 +353,7 @@ const Contacts = () => {
         </InputGroup>
       </SearchContainer>
 
-      {loading ? (
-        <EmptyState>
-          <div className="spinner-border text-warning" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-        </EmptyState>
-      ) : (
-        <ContactList>
-          {requests.length > 0 && (
-            <div className="p-3 border-bottom">
-              <h6 className="text-muted mb-2">Contact Requests</h6>
-              {requests.map((request) => (
-                <ContactItem key={request.id}>
-                  <ContactAvatar 
-                    src={request.userInfo?.photoURL || '/default-avatar.png'} 
-                    alt={request.userInfo?.displayName}
-                    roundedCircle
-                  />
-                  <ContactInfo>
-                    <ContactName>{request.userInfo?.displayName || 'Unknown User'}</ContactName>
-                    <LastMessage>Wants to connect with you</LastMessage>
-                  </ContactInfo>
-                  <div className="d-flex">
-                    <ActionButton 
-                      onClick={() => respondRequest(request, 'accepted')}
-                      title="Accept"
-                      className="text-success"
-                    >
-                      <FiCheck size={20} />
-                    </ActionButton>
-                    <ActionButton 
-                      onClick={() => respondRequest(request, 'rejected')}
-                      title="Reject"
-                      className="text-danger"
-                    >
-                      <FiX size={20} />
-                    </ActionButton>
-                  </div>
-                </ContactItem>
-              ))}
-            </div>
-          )}
-
-          {filteredContacts.length > 0 ? (
-            filteredContacts.map((contact) => (
-              <ContactItem 
-                key={contact.id} 
-                onClick={() => navigate(`/chat/${contact.contactId}`)}
-              >
-                <ContactAvatar 
-                  src={contact.userInfo?.photoURL || '/default-avatar.png'} 
-                  alt={contact.userInfo?.displayName}
-                  roundedCircle
-                />
-                <ContactInfo>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <ContactName>{contact.userInfo?.displayName || 'Unknown User'}</ContactName>
-                    {contact.lastChatAt && (
-                      <TimeAgo>{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
-                    )}
-                  </div>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <LastMessage className="text-truncate me-2">
-                      {contact.lastMessage || 'No messages yet'}
-                    </LastMessage>
-                    <ActionButton 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveContact(contact.id);
-                      }}
-                      title="Remove contact"
-                      className="btn-danger"
-                    >
-                      <FiTrash2 size={16} />
-                    </ActionButton>
-                  </div>
-                </ContactInfo>
-              </ContactItem>
-            ))
-          ) : (
-            <EmptyState>
-              <FiUserPlus size={48} />
-              <h5>No contacts yet</h5>
-              <p>Add a contact to start chatting</p>
-              <Button 
-                variant="primary" 
-                onClick={() => setShowAdd(true)}
-                className="mt-2"
-              >
-                <FiUserPlus className="me-2" />
-                Add Contact
-              </Button>
-            </EmptyState>
-          )}
-        </ContactList>
-      )}
+      {renderContactList()}
 
       <AddButton 
         onClick={() => setShowAdd(true)}

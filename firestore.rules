@@ -27,8 +27,17 @@ service cloud.firestore {
 
     // Users collection - public profiles
     match /users/{userId} {
+      // Allow reading user profiles (for search)
       allow read: if request.auth != null;
+      // Users can only write their own profile
       allow write: if request.auth.uid == userId;
+      
+      // Allow querying users by username
+      match /{document=**} {
+        allow list: if request.auth != null &&
+          request.query.limit != null &&
+          request.query.where.fieldPath == 'username';
+      }
     }
 
     // Contacts collection - only owner can access
