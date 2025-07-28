@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { auth, provider, db } from '../firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { Container, Button, Form, Alert, InputGroup } from 'react-bootstrap';
+import { Button, Form, Alert, InputGroup } from 'react-bootstrap';
 import { doc, setDoc } from 'firebase/firestore';
 import styled from 'styled-components';
 import { FaGoogle, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowRight } from 'react-icons/fa';

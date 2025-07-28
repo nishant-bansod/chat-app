@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Card, Button, Form, Image, Spinner, Badge } from 'react-bootstrap';
+import { Container, Card, Button, Form, Image, Spinner } from 'react-bootstrap';
 import { ArrowLeft, Send, Check2All, PersonCircle, BoxArrowRight } from 'react-bootstrap-icons';
 import styled from 'styled-components';
 import { colors, shadows, borderRadius } from '../theme/colors';
