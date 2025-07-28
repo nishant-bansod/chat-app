@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Container, Card, Button, ListGroup, Image, InputGroup, Form, Badge } from 'react-bootstrap';
 import '../components/FunTheme.css';
+import AddContactModal from '../components/AddContactModal';
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const currentUser = auth.currentUser;
@@ -55,7 +58,21 @@ function Contacts() {
     };
 
     fetchContacts();
-  }, [currentUser, navigate]);
+
+    // subscribe to pending friend requests
+    const unsub = onSnapshot(
+      query(
+        collection(db, 'contactRequests'),
+        where('toUid', '==', currentUser.uid),
+        where('status', '==', 'pending')
+      ),
+      (snap) => {
+        setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }
+    );
+
+    return () => unsub();
+   }, [currentUser, navigate]);
 
   useEffect(() => {
     const filtered = contacts.filter(contact =>
@@ -67,6 +84,21 @@ function Contacts() {
 
   const handleContactSelect = (contact) => {
     navigate(`/chat/${contact.contactId}`);
+  };
+
+  // respond to a request
+  const respondRequest = async (req, status) => {
+    try {
+      const reqRef = doc(db, 'contactRequests', req.id);
+      await updateDoc(reqRef, { status });
+
+      if (status === 'accepted') {
+        await saveContact(currentUser.uid, req.fromUid);
+        await saveContact(req.fromUid, currentUser.uid);
+      }
+    } catch (e) {
+      console.error('Failed to respond to request', e);
+    }
   };
 
   const generateInviteLink = async () => {
@@ -118,12 +150,12 @@ function Contacts() {
               📋 Share Link
             </Button>
             <Button 
-              variant="outline-primary" 
-              size="sm"
-              onClick={() => navigate('/contacts')}
-            >
-              Invite Friends
-            </Button>
+               variant="outline-primary" 
+               size="sm"
+               onClick={() => setShowAdd(true)}
+             >
+               Add Contact {requests.length > 0 && <Badge bg="danger" className="ms-1">{requests.length}</Badge>}
+             </Button>
           </div>
         </Card.Header>
         
@@ -136,6 +168,22 @@ function Contacts() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </InputGroup>
+
+          {/* Pending requests */}
+          {requests.length > 0 && (
+            <div className="mb-3">
+              <h6>Pending Requests</h6>
+              {requests.map((r) => (
+                <Card key={r.id} className="p-2 mb-2 d-flex flex-row justify-content-between align-items-center">
+                  <span>{r.fromUid}</span>
+                  <div>
+                    <Button size="sm" className="me-2" onClick={() => respondRequest(r, 'accepted')}>Accept</Button>
+                    <Button size="sm" variant="secondary" onClick={() => respondRequest(r, 'rejected')}>Reject</Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
 
           {filteredContacts.length === 0 ? (
             <div className="text-center py-4">
@@ -185,6 +233,7 @@ function Contacts() {
           )}
         </Card.Body>
       </Card>
+    <AddContactModal show={showAdd} onHide={() => setShowAdd(false)} />
     </Container>
   );
 }
