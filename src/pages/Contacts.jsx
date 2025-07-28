@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Container, Card, Button, ListGroup, Image, InputGroup, Form, Badge } from 'react-bootstrap';
 import '../components/FunTheme.css';
@@ -84,6 +84,17 @@ function Contacts() {
 
   const handleContactSelect = (contact) => {
     navigate(`/chat/${contact.contactId}`);
+  };
+
+  // save contact helper
+  const saveContact = async (userId, contactId) => {
+    const contactRef = doc(db, 'contacts', `${userId}_${contactId}`);
+    await setDoc(contactRef, {
+      userId,
+      contactId,
+      addedAt: serverTimestamp(),
+      lastChatAt: serverTimestamp(),
+    }, { merge: true });
   };
 
   // respond to a request
