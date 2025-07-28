@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { InputGroup, Button } from 'react-bootstrap';
-import { FiTrash2, FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX } from 'react-icons/fi';
+import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
 import {
   ContactsContainer,
@@ -68,18 +68,18 @@ const Contacts = () => {
     }
   };
 
-  // Handle contact removal
   const handleRemoveContact = async (contactId) => {
-    if (window.confirm('Are you sure you want to remove this contact?')) {
-      try {
-        await deleteDoc(doc(db, 'contacts', contactId));
-      } catch (error) {
-        console.error('Error removing contact:', error);
-      }
+    if (!window.confirm('Are you sure you want to remove this contact?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'contacts', contactId));
+      // Optional: Show success message
+    } catch (error) {
+      console.error('Error removing contact:', error);
+      // Optional: Show error message
     }
   };
 
-  // Handle contact request response
   const respondRequest = async (request, response) => {
     try {
       if (response === 'accepted') {

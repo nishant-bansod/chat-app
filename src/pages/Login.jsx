@@ -3,7 +3,7 @@ import { auth, provider, db } from '../firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, Alert, InputGroup } from 'react-bootstrap';
-import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import styled from 'styled-components';
 import { FaGoogle, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowRight } from 'react-icons/fa';
 import { colors, shadows, borderRadius } from '../theme/colors';
