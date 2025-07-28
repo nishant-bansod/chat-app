@@ -23,56 +23,67 @@ function Contacts() {
       return;
     }
 
-    const fetchContacts = async () => {
-      try {
-        // Get user's contacts
-        const contactsQuery = query(
-          collection(db, 'contacts'),
-          where('userId', '==', currentUser.uid),
-          orderBy('lastChatAt', 'desc')
-        );
-        
-        const contactsSnapshot = await getDocs(contactsQuery);
-        const contactsList = [];
-
-        // Fetch user details for each contact
-        for (const contactDoc of contactsSnapshot.docs) {
-          const contactData = contactDoc.data();
+    if (!currentUser?.uid) return;
+    
+    // Set up real-time listener for contacts
+    const contactsQuery = query(
+      collection(db, 'contacts'),
+      where('userId', '==', currentUser.uid),
+      orderBy('lastChatAt', 'desc')
+    );
+    
+    const unsubscribeContacts = onSnapshot(contactsQuery, async (snapshot) => {
+      const updatedContacts = [];
+      
+      // Process each contact in parallel
+      const contactPromises = snapshot.docs.map(async (contactDoc) => {
+        const contactData = contactDoc.data();
+        try {
           const userDoc = await getDoc(doc(db, 'users', contactData.contactId));
-          
           if (userDoc.exists()) {
-            contactsList.push({
+            return {
               id: contactDoc.id,
               ...contactData,
               userInfo: userDoc.data()
-            });
+            };
           }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
         }
+        return null;
+      });
+      
+      // Wait for all user data to be fetched
+      const contactsWithUserData = (await Promise.all(contactPromises)).filter(Boolean);
+      
+      setContacts(contactsWithUserData);
+      setFilteredContacts(contactsWithUserData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error in contacts listener:', error);
+      setLoading(false);
+    });
+    
+    // Clean up the listener on component unmount
+    return () => unsubscribeContacts();
 
-        setContacts(contactsList);
-        setFilteredContacts(contactsList);
-      } catch (error) {
-        console.error('Error fetching contacts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContacts();
-
-    // subscribe to pending friend requests
-    const unsub = onSnapshot(
-      query(
-        collection(db, 'contactRequests'),
-        where('toUid', '==', currentUser.uid),
-        where('status', '==', 'pending')
-      ),
-      (snap) => {
-        setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+    // Subscribe to pending friend requests
+    const requestsQuery = query(
+      collection(db, 'contactRequests'),
+      where('toUid', '==', currentUser.uid),
+      where('status', '==', 'pending')
     );
-
-    return () => unsub();
+    
+    const unsubscribeRequests = onSnapshot(requestsQuery, (snap) => {
+      setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error('Error in requests listener:', error);
+    });
+    
+    // Clean up all listeners on unmount
+    return () => {
+      unsubscribeRequests();
+    };
    }, [currentUser, navigate]);
 
   useEffect(() => {

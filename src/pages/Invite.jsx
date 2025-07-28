@@ -65,14 +65,17 @@ function Invite() {
     if (!inviteData || !currentUser) return;
 
     try {
-      // Save contact for invitee (currentUser) only; inviter will get contact after first message
-      await saveContact(currentUser.uid, inviteData.createdBy);
+      // Save contacts for both users immediately
+      await Promise.all([
+        saveContact(currentUser.uid, inviteData.createdBy),      // Current user's contact
+        saveContact(inviteData.createdBy, currentUser.uid)       // Inviter's contact
+      ]);
 
       // Navigate to chat room
       navigate(`/chat/${inviteData.createdBy}`);
     } catch (err) {
       setError('Error joining chat');
-      console.error(err);
+      console.error('Join chat error:', err);
     }
   };
 
