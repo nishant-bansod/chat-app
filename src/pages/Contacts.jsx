@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { InputGroup, Button } from 'react-bootstrap';
-import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiLink, FiCopy } from 'react-icons/fi';
+import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
 import {
   ContactsContainer,
@@ -29,7 +29,7 @@ import {
   LastMessage,
   TimeAgo,
   ActionButton,
-  EmptyState,
+  // EmptyState,
   AddButton
 } from './Contacts.styles';
 

@@ -38,8 +38,8 @@ function Invite() {
     return () => unsub();
   }, []);
 
-  // Check if users are already contacts
-  const checkExistingContact = async (inviterId) => {
+  // Memoize the checkExistingContact function with useCallback
+  const checkExistingContact = React.useCallback(async (inviterId) => {
     if (!currentUser) return false;
     
     const contactRef = collection(db, 'contacts');
@@ -51,7 +51,7 @@ function Invite() {
     
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser === null) return; // still loading auth
@@ -182,28 +182,12 @@ function Invite() {
     if (!inviteData || !currentUser) return;
 
     try {
-      // Save contacts for both users immediately
-      await Promise.all([
-        saveContact(currentUser.uid, inviteData.createdBy),      // Current user's contact
-        saveContact(inviteData.createdBy, currentUser.uid)       // Inviter's contact
-      ]);
-
       // Navigate to chat room
       navigate(`/chat/${inviteData.createdBy}`);
     } catch (err) {
       setError('Error joining chat');
       console.error('Join chat error:', err);
     }
-  };
-
-  const saveContact = async (userId, contactId) => {
-    const contactRef = doc(db, 'contacts', `${userId}_${contactId}`);
-    await setDoc(contactRef, {
-      userId,
-      contactId,
-      addedAt: serverTimestamp(),
-      lastChatAt: serverTimestamp()
-    }, { merge: true });
   };
 
   if (loading) {
