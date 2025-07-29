@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { InputGroup, Button } from 'react-bootstrap';
-import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX } from 'react-icons/fi';
+import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiLink, FiCopy } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
 import {
   ContactsContainer,
@@ -39,6 +39,7 @@ const SearchInput = ({ ...props }) => (
 );
 
 const Contacts = () => {
+  const [inviteLink, setInviteLink] = useState('');
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -199,6 +200,49 @@ const Contacts = () => {
     };
   }, [currentUser, navigate]);
 
+  // Set up invite link
+  useEffect(() => {
+    if (currentUser) {
+      setInviteLink(`${window.location.origin}/invite/${currentUser.uid}`);
+    }
+  }, [currentUser]);
+
+  // Copy invite link to clipboard
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    // Optional: Show success toast/message
+  };
+
+  // Fetch contacts with real-time updates
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const contactsQuery = query(
+      collection(db, 'contacts'),
+      where('userId', '==', currentUser.uid),
+      orderBy('lastChatAt', 'desc')
+    );
+
+    const unsubscribeContacts = onSnapshot(
+      contactsQuery,
+      (snapshot) => {
+        const contactsList = [];
+        snapshot.forEach((doc) => {
+          contactsList.push({ id: doc.id, ...doc.data() });
+        });
+        setContacts(contactsList);
+        setFilteredContacts(contactsList);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching contacts:', error);
+        setLoading(false);
+      }
+    );
+
+    return unsubscribeContacts;
+  }, [currentUser]);
+
   // Get status for a contact
   const getContactStatus = (contactId) => {
     const sentRequest = sentRequests.find(req => req.toUid === contactId);
@@ -226,21 +270,44 @@ const Contacts = () => {
     }
   };
 
+  // Render welcome section with action buttons
+  const renderWelcomeSection = () => (
+    <div className="mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h4>Welcome!</h4>
+        <Button variant="primary" onClick={() => setShowAdd(true)}>
+          <FiUserPlus className="me-2" /> Add Contact
+        </Button>
+      </div>
+      
+      <div className="card mb-4">
+        <div className="card-body">
+          <h5>Invite by Link</h5>
+          <div className="input-group mb-2">
+            <input 
+              type="text" 
+              className="form-control" 
+              value={inviteLink} 
+              readOnly 
+            />
+            <button 
+              className="btn btn-outline-secondary" 
+              type="button"
+              onClick={copyInviteLink}
+            >
+              <FiCopy className="me-1" /> Copy
+            </button>
+          </div>
+          <p className="text-muted small mb-0">Share this link to invite others to chat with you</p>
+        </div>
+      </div>
+    </div>
+  );
+
   // Render contact list
   const renderContactList = () => {
     if (loading) {
       return <div className="text-center my-4">Loading contacts...</div>;
-    }
-
-    if (filteredContacts.length === 0) {
-      return (
-        <EmptyState>
-          <p>No contacts found</p>
-          <Button variant="primary" onClick={() => setShowAdd(true)}>
-            <FiUserPlus /> Add Contact
-          </Button>
-        </EmptyState>
-      );
     }
 
     return (
@@ -320,12 +387,17 @@ const Contacts = () => {
   return (
     <ContactsContainer>
       <Header>
-        <Title>Messages</Title>
+        <Title>Contacts</Title>
       </Header>
-      
-      <SearchContainer>
+
+      {renderWelcomeSection()}
+
+      <SearchContainer className="mb-3">
         <InputGroup>
-          <SearchInput
+          <InputGroup.Text>
+            <FiSearch />
+          </InputGroup.Text>
+          <SearchInput 
             placeholder="Search contacts..."
             value={searchTerm}
             onChange={(e) => {
@@ -334,9 +406,6 @@ const Contacts = () => {
             }}
             aria-label="Search contacts"
           />
-          <InputGroup.Text style={{ backgroundColor: 'transparent', borderLeft: 'none' }}>
-            <FiSearch />
-          </InputGroup.Text>
         </InputGroup>
       </SearchContainer>
 

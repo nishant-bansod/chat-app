@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection } from 'firebase/firestore';
 import { Container, Card, Button, Alert, Spinner } from 'react-bootstrap';
 import { onAuthStateChanged } from 'firebase/auth';
+import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 function Invite() {
   const { inviteId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [inviteData, setInviteData] = useState(null);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  
+  // Check if users are already contacts
+  const [existingContact, setExistingContact] = useState(false);
 
   // Wait for Firebase Auth to resolve current currentUser
   useEffect(() => {
@@ -20,6 +26,21 @@ function Invite() {
     });
     return () => unsub();
   }, []);
+
+  // Check if users are already contacts
+  const checkExistingContact = async (inviterId) => {
+    if (!currentUser) return false;
+    
+    const contactRef = collection(db, 'contacts');
+    const q = query(
+      contactRef,
+      where('userId', '==', currentUser.uid),
+      where('contactId', '==', inviterId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  };
 
   useEffect(() => {
     if (currentUser === null) return; // still loading auth
@@ -34,10 +55,19 @@ function Invite() {
         
         if (!inviteDoc.exists()) {
           setError('Invalid or expired invitation link');
+          setLoading(false);
           return;
         }
 
         const data = inviteDoc.data();
+        
+        // Check if users are already contacts
+        const isExistingContact = await checkExistingContact(data.inviterId);
+        if (isExistingContact) {
+          setExistingContact(true);
+          setLoading(false);
+          return;
+        }
         
         // Check if invite is expired (24 hours)
         const now = new Date();
@@ -46,6 +76,7 @@ function Invite() {
         
         if (hoursDiff > 24) {
           setError('This invitation link has expired');
+          setLoading(false);
           return;
         }
 
@@ -60,6 +91,81 @@ function Invite() {
 
     fetchInvite();
   }, [inviteId, currentUser, navigate]);
+
+  const handleAccept = async () => {
+    if (!currentUser || !inviteData) return;
+    
+    setProcessing(true);
+    setError('');
+    
+    try {
+      // Check again if users are already contacts
+      const isExistingContact = await checkExistingContact(inviteData.inviterId);
+      if (isExistingContact) {
+        setExistingContact(true);
+        setProcessing(false);
+        return;
+      }
+      
+      // Create a chat between users
+      const chatRef = doc(collection(db, 'chats'));
+      await setDoc(chatRef, {
+        participants: [currentUser.uid, inviteData.inviterId],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastMessage: null
+      });
+      
+      // Create contact entries for both users
+      const batch = writeBatch(db);
+      
+      // Add inviter to current user's contacts
+      const currentUserContactRef = doc(collection(db, 'contacts'));
+      batch.set(currentUserContactRef, {
+        userId: currentUser.uid,
+        contactId: inviteData.inviterId,
+        displayName: inviteData.inviterName,
+        photoURL: inviteData.inviterPhoto || null,
+        chatId: chatRef.id,
+        createdAt: serverTimestamp(),
+        lastChatAt: serverTimestamp(),
+        lastMessage: 'Chat started'
+      });
+      
+      // Add current user to inviter's contacts
+      const inviterContactRef = doc(collection(db, 'contacts'));
+      batch.set(inviterContactRef, {
+        userId: inviteData.inviterId,
+        contactId: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL || null,
+        chatId: chatRef.id,
+        createdAt: serverTimestamp(),
+        lastChatAt: serverTimestamp(),
+        lastMessage: 'Chat started'
+      });
+      
+      await batch.commit();
+      
+      // Mark the invite as accepted
+      await updateDoc(doc(db, 'invites', inviteId), {
+        status: 'accepted',
+        acceptedAt: serverTimestamp()
+      });
+      
+      setSuccess(true);
+      
+      // Redirect to the new chat after a short delay
+      setTimeout(() => {
+        navigate(`/chat/${chatRef.id}`);
+      }, 1500);
+    } catch (err) {
+      console.error('Error accepting invite:', err);
+      setError('Failed to accept invitation. Please try again.');
+    } finally {
+      setProcessing(false);
+    }  
+  };
 
   const handleJoinChat = async () => {
     if (!inviteData || !currentUser) return;
@@ -91,11 +197,54 @@ function Invite() {
 
   if (loading) {
     return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-        <p className="mt-3">Loading invitation...</p>
+      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
+        <Spinner animation="border" variant="primary" />
+        <span className="ms-2">Loading invitation...</span>
+      </Container>
+    );
+  }
+
+  if (success) {
+    return (
+      <Container className="py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-6">
+            <Card className="text-center">
+              <Card.Body>
+                <FaCheckCircle className="text-success mb-3" size={48} />
+                <h3>Invitation Accepted!</h3>
+                <p>You are now connected with {inviteData?.inviterName}.</p>
+                <p>Redirecting to your chat...</p>
+                <Spinner animation="border" size="sm" className="mt-2" />
+              </Card.Body>
+            </Card>
+          </div>
+        </div>
+      </Container>
+    );
+  }
+
+  if (existingContact) {
+    return (
+      <Container className="py-5">
+        <div className="row justify-content-center">
+          <div className="col-md-6">
+            <Card>
+              <Card.Body className="text-center">
+                <FaCheckCircle className="text-success mb-3" size={48} />
+                <h3>Already Connected</h3>
+                <p>You are already connected with {inviteData?.inviterName}.</p>
+                <Button 
+                  variant="primary" 
+                  onClick={() => navigate('/contacts')}
+                  className="mt-3"
+                >
+                  Go to Contacts
+                </Button>
+              </Card.Body>
+            </Card>
+          </div>
+        </div>
       </Container>
     );
   }
@@ -116,40 +265,85 @@ function Invite() {
   }
 
   return (
-    <Container className="py-5" style={{ maxWidth: 500 }}>
-      <Card>
-        <Card.Header className="text-center">
-          <h4>Chat Invitation</h4>
-        </Card.Header>
-        <Card.Body className="text-center">
-          <div className="mb-4">
-            <img 
-              src={inviteData?.creatorPhoto || '/default-avatar.png'} 
-              alt="Creator" 
-              className="rounded-circle mb-3"
-              style={{ width: 80, height: 80, objectFit: 'cover' }}
-            />
-            <h5>{inviteData?.creatorName || 'Someone'}</h5>
-            <p className="text-muted">has invited you to chat!</p>
-          </div>
+    <Container className="py-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6">
+          <Card>
+            <Card.Body className="text-center">
+              <h2>Chat Invitation</h2>
+              
+              {error ? (
+                <Alert variant="danger" className="text-start">
+                  <FaTimesCircle className="me-2" />
+                  {error}
+                </Alert>
+              ) : (
+                <>
+                  <div className="my-4">
+                    <div className="avatar-lg mx-auto mb-3">
+                      {inviteData?.inviterPhoto ? (
+                        <img 
+                          src={inviteData.inviterPhoto} 
+                          alt={inviteData.inviterName}
+                          className="rounded-circle img-thumbnail"
+                          style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div 
+                          className="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto"
+                          style={{ 
+                            width: '100px', 
+                            height: '100px',
+                            fontSize: '2.5rem',
+                            color: 'white'
+                          }}
+                        >
+                          {inviteData?.inviterName?.charAt(0) || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <h4>{inviteData?.inviterName || 'Someone'}</h4>
+                    <p className="text-muted">wants to connect with you!</p>
+                  </div>
+                  
+                  <div className="d-grid gap-2 mt-4">
+                    <Button 
+                      variant="primary" 
+                      size="lg"
+                      onClick={handleAccept}
+                      disabled={!inviteData || processing}
+                      className="mb-2"
+                    >
+                      {processing ? (
+                        <>
+                          <Spinner as="span" size="sm" animation="border" role="status" aria-hidden="true" className="me-2" />
+                          Connecting...
+                        </>
+                      ) : (
+                        'Accept Invitation'
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      variant="outline-secondary" 
+                      onClick={() => navigate('/')}
+                      disabled={processing}
+                    >
+                      Maybe Later
+                    </Button>
+                  </div>
+                </>
+              )}
+            </Card.Body>
+          </Card>
           
-          <div className="d-grid gap-2">
-            <Button 
-              variant="primary" 
-              size="lg"
-              onClick={handleJoinChat}
-            >
-              Join Chat
-            </Button>
-            <Button 
-              variant="outline-secondary"
-              onClick={() => navigate('/contacts')}
-            >
-              Maybe Later
-            </Button>
+          <div className="text-center mt-3">
+            <small className="text-muted">
+              By accepting, you agree to our Terms of Service and Privacy Policy
+            </small>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
     </Container>
   );
 }
