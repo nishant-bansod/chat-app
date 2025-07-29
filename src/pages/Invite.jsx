@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  serverTimestamp, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  writeBatch, 
+  updateDoc 
+} from 'firebase/firestore';
 import { Container, Card, Button, Alert, Spinner } from 'react-bootstrap';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
