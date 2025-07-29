@@ -68,18 +68,6 @@ const Contacts = () => {
     }
   };
 
-  const handleRemoveContact = async (contactId) => {
-    if (!window.confirm('Are you sure you want to remove this contact?')) return;
-    
-    try {
-      await deleteDoc(doc(db, 'contacts', contactId));
-      // Optional: Show success message
-    } catch (error) {
-      console.error('Error removing contact:', error);
-      // Optional: Show error message
-    }
-  };
-
   const respondRequest = async (request, response) => {
     try {
       if (response === 'accepted') {
