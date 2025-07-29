@@ -53,6 +53,49 @@ function Invite() {
     return !querySnapshot.empty;
   }, [currentUser]);
 
+  // Memoize the fetchInvite function to avoid recreating it on every render
+  const fetchInvite = React.useCallback(async () => {
+    if (!currentUser) return;
+    
+    try {
+      const inviteDoc = await getDoc(doc(db, 'invites', inviteId));
+      
+      if (!inviteDoc.exists()) {
+        setError('Invalid or expired invitation link');
+        setLoading(false);
+        return;
+      }
+
+      const data = inviteDoc.data();
+      
+      // Check if users are already contacts
+      const isExistingContact = await checkExistingContact(data.inviterId);
+      if (isExistingContact) {
+        setExistingContact(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Check if invite is expired (24 hours)
+      const now = new Date();
+      const inviteTime = data.createdAt?.toDate();
+      const hoursDiff = (now - inviteTime) / (1000 * 60 * 60);
+      
+      if (hoursDiff > 24) {
+        setError('This invitation link has expired');
+        setLoading(false);
+        return;
+      }
+
+      setInviteData(data);
+    } catch (err) {
+      setError('Error loading invitation');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [checkExistingContact, currentUser, inviteId]);
+
   useEffect(() => {
     if (currentUser === null) return; // still loading auth
     if (!currentUser) {
@@ -60,48 +103,10 @@ function Invite() {
       return;
     }
 
-    const fetchInvite = async () => {
-      try {
-        const inviteDoc = await getDoc(doc(db, 'invites', inviteId));
-        
-        if (!inviteDoc.exists()) {
-          setError('Invalid or expired invitation link');
-          setLoading(false);
-          return;
-        }
-
-        const data = inviteDoc.data();
-        
-        // Check if users are already contacts
-        const isExistingContact = await checkExistingContact(data.inviterId);
-        if (isExistingContact) {
-          setExistingContact(true);
-          setLoading(false);
-          return;
-        }
-        
-        // Check if invite is expired (24 hours)
-        const now = new Date();
-        const inviteTime = data.createdAt?.toDate();
-        const hoursDiff = (now - inviteTime) / (1000 * 60 * 60);
-        
-        if (hoursDiff > 24) {
-          setError('This invitation link has expired');
-          setLoading(false);
-          return;
-        }
-
-        setInviteData(data);
-      } catch (err) {
-        setError('Error loading invitation');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchInvite();
-  }, [inviteId, currentUser, navigate]);
+  }, [fetchInvite, currentUser, navigate]);
+
+
 
   const handleAccept = async () => {
     if (!currentUser || !inviteData) return;
@@ -178,17 +183,7 @@ function Invite() {
     }  
   };
 
-  const handleJoinChat = async () => {
-    if (!inviteData || !currentUser) return;
 
-    try {
-      // Navigate to chat room
-      navigate(`/chat/${inviteData.createdBy}`);
-    } catch (err) {
-      setError('Error joining chat');
-      console.error('Join chat error:', err);
-    }
-  };
 
   if (loading) {
     return (
