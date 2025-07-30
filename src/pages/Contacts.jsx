@@ -11,6 +11,7 @@ import {
   updateDoc,
   setDoc
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { InputGroup, Button, Alert, Spinner } from 'react-bootstrap';
 import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers } from 'react-icons/fi';
@@ -48,8 +49,16 @@ const Contacts = () => {
   const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
-  const currentUser = auth.currentUser;
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Format time for last message
   const formatTimeAgo = (date) => {
@@ -71,6 +80,7 @@ const Contacts = () => {
 
   const respondRequest = async (request, response) => {
     try {
+      if (!currentUser) throw new Error('No current user');
       if (response === 'accepted') {
         // Create a contact for both users
         const contactRef1 = doc(collection(db, 'contacts'));
@@ -83,7 +93,6 @@ const Contacts = () => {
           lastChatAt: null,
           lastMessage: null
         });
-
         const contactRef2 = doc(collection(db, 'contacts'));
         await setDoc(contactRef2, {
           userId: request.userInfo.uid,
@@ -95,19 +104,16 @@ const Contacts = () => {
           lastMessage: null
         });
       }
-      
       // Update the request status
       await updateDoc(doc(db, 'contactRequests', request.id), {
         status: response,
         updatedAt: new Date()
       });
-      
       // Remove from local state
       setRequests(requests.filter(req => req.id !== request.id));
-      
     } catch (error) {
-      console.error('Error responding to request:', error);
-      setError('Failed to respond to request. Please try again.');
+      console.error('Error responding to request:', error, { request, response });
+      setError('Failed to respond to request. Please try again. ' + (error && error.message ? error.message : ''));
     }
   };
 
@@ -267,7 +273,7 @@ const Contacts = () => {
   const renderWelcomeSection = () => (
     <div className="mb-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="mb-0">Welcome to BumbleChat!</h4>
+        <h4 className="mb-0">Welcome to Nishant Chat Room!</h4>
         <Button variant="primary" onClick={() => setShowAdd(true)}>
           <FiUserPlus className="me-2" /> Add Contact (by email or name)
         </Button>
@@ -419,6 +425,11 @@ const Contacts = () => {
     <ContactsContainer>
       <Header>
         <Title>Contacts</Title>
+        {currentUser && (
+          <div style={{ fontSize: '0.95rem', color: '#6D6D6D', marginTop: 4 }}>
+            Logged in as: <strong>{currentUser.email}</strong>
+          </div>
+        )}
       </Header>
 
       {renderWelcomeSection()}
