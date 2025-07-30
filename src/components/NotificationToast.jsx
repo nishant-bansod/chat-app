@@ -1,6 +1,6 @@
 import React from 'react';
 import { Toast, ToastContainer } from 'react-bootstrap';
-import { FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaTimes } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
 import styled from 'styled-components';
 import { colors, shadows, borderRadius } from '../theme/colors';
 

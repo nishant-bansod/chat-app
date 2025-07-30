@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Alert, Spinner, ListGroup, InputGroup, Toast } from 'react-bootstrap';
+import { Modal, Form, Button, Alert, Spinner, ListGroup, InputGroup } from 'react-bootstrap';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { FiSearch, FiUserPlus, FiCheck, FiX } from 'react-icons/fi';
+import { FiSearch, FiUserPlus, FiCheck } from 'react-icons/fi';
 
 function AddContactModal({ show, onHide, onContactAdded }) {
   const [searchTerm, setSearchTerm] = useState('');

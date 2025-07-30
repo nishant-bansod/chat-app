@@ -22,7 +22,7 @@ export const useNotifications = () => {
     }
 
     return id;
-  }, []);
+  }, [removeNotification]);
 
   const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
