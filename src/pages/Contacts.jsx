@@ -12,9 +12,10 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import { InputGroup, Button } from 'react-bootstrap';
-import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy } from 'react-icons/fi';
+import { InputGroup, Button, Alert, Spinner } from 'react-bootstrap';
+import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
+import { createInvite } from './Invite';
 import {
   ContactsContainer,
   Header,
@@ -29,7 +30,6 @@ import {
   LastMessage,
   TimeAgo,
   ActionButton,
-  // EmptyState,
   AddButton
 } from './Contacts.styles';
 
@@ -47,6 +47,7 @@ const Contacts = () => {
   const [requests, setRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const currentUser = auth.currentUser;
 
@@ -106,6 +107,7 @@ const Contacts = () => {
       
     } catch (error) {
       console.error('Error responding to request:', error);
+      setError('Failed to respond to request. Please try again.');
     }
   };
 
@@ -133,6 +135,9 @@ const Contacts = () => {
 
     if (!currentUser?.uid) return;
     
+    setLoading(true);
+    setError('');
+    
     // Set up real-time listener for contacts
     const contactsQuery = query(
       collection(db, 'contacts'),
@@ -141,26 +146,36 @@ const Contacts = () => {
     );
     
     const unsubscribeContacts = onSnapshot(contactsQuery, async (snapshot) => {
-      const contactPromises = snapshot.docs.map(async (contactDoc) => {
-        const contactData = contactDoc.data();
-        try {
-          const userDoc = await getDoc(doc(db, 'users', contactData.contactId));
-          if (userDoc.exists()) {
-            return {
-              id: contactDoc.id,
-              ...contactData,
-              userInfo: userDoc.data()
-            };
+      try {
+        const contactPromises = snapshot.docs.map(async (contactDoc) => {
+          const contactData = contactDoc.data();
+          try {
+            const userDoc = await getDoc(doc(db, 'users', contactData.contactId));
+            if (userDoc.exists()) {
+              return {
+                id: contactDoc.id,
+                ...contactData,
+                userInfo: userDoc.data()
+              };
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error);
           }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
-        return null;
-      });
+          return null;
+        });
 
-      const resolvedContacts = (await Promise.all(contactPromises)).filter(Boolean);
-      setContacts(resolvedContacts);
-      setFilteredContacts(resolvedContacts);
+        const resolvedContacts = (await Promise.all(contactPromises)).filter(Boolean);
+        setContacts(resolvedContacts);
+        setFilteredContacts(resolvedContacts);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading contacts:', error);
+        setError('Failed to load contacts. Please refresh the page.');
+        setLoading(false);
+      }
+    }, (error) => {
+      console.error('Error in contacts listener:', error);
+      setError('Failed to load contacts. Please refresh the page.');
       setLoading(false);
     });
 
@@ -208,40 +223,18 @@ const Contacts = () => {
   }, [currentUser]);
 
   // Copy invite link to clipboard
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    // Optional: Show success toast/message
-  };
-
-  // Fetch contacts with real-time updates
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const contactsQuery = query(
-      collection(db, 'contacts'),
-      where('userId', '==', currentUser.uid),
-      orderBy('lastChatAt', 'desc')
-    );
-
-    const unsubscribeContacts = onSnapshot(
-      contactsQuery,
-      (snapshot) => {
-        const contactsList = [];
-        snapshot.forEach((doc) => {
-          contactsList.push({ id: doc.id, ...doc.data() });
-        });
-        setContacts(contactsList);
-        setFilteredContacts(contactsList);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching contacts:', error);
-        setLoading(false);
+  const copyInviteLink = async () => {
+    try {
+      if (currentUser) {
+        const link = await createInvite(currentUser);
+        await navigator.clipboard.writeText(link);
+        setInviteLink(link);
+        // Optionally show a notification
       }
-    );
-
-    return unsubscribeContacts;
-  }, [currentUser]);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+    }
+  };
 
   // Get status for a contact
   const getContactStatus = (contactId) => {
@@ -274,15 +267,17 @@ const Contacts = () => {
   const renderWelcomeSection = () => (
     <div className="mb-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4>Welcome!</h4>
+        <h4 className="mb-0">Welcome to BumbleChat!</h4>
         <Button variant="primary" onClick={() => setShowAdd(true)}>
-          <FiUserPlus className="me-2" /> Add Contact
+          <FiUserPlus className="me-2" /> Add Contact (by email or name)
         </Button>
       </div>
       
-      <div className="card mb-4">
+      <div className="card mb-4 border-0 shadow-sm">
         <div className="card-body">
-          <h5>Invite by Link</h5>
+          <h5 className="card-title d-flex align-items-center">
+            <FiUsers className="me-2" /> Invite by Link
+          </h5>
           <div className="input-group mb-2">
             <input 
               type="text" 
@@ -307,16 +302,46 @@ const Contacts = () => {
   // Render contact list
   const renderContactList = () => {
     if (loading) {
-      return <div className="text-center my-4">Loading contacts...</div>;
+      return (
+        <div className="text-center my-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading contacts...</span>
+          </Spinner>
+          <p className="mt-3 text-muted">Loading your contacts...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert variant="danger" className="my-4">
+          {error}
+        </Alert>
+      );
+    }
+
+    if (contacts.length === 0 && requests.length === 0) {
+      return (
+        <div className="text-center my-5">
+          <FiMessageCircle size={48} className="text-muted mb-3" />
+          <h5>No contacts yet</h5>
+          <p className="text-muted">Start by adding some contacts to begin chatting!</p>
+          <Button variant="primary" onClick={() => setShowAdd(true)}>
+            <FiUserPlus className="me-2" /> Add Your First Contact
+          </Button>
+        </div>
+      );
     }
 
     return (
       <ContactList>
         {requests.length > 0 && (
-          <div className="p-3 border-bottom">
-            <h6 className="text-muted mb-2">Contact Requests</h6>
+          <div className="p-3 border-bottom bg-light">
+            <h6 className="text-muted mb-3 d-flex align-items-center">
+              <FiUserPlus className="me-2" /> Contact Requests ({requests.length})
+            </h6>
             {requests.map((request) => (
-              <ContactItem key={request.id}>
+              <ContactItem key={request.id} className="bg-white">
                 <ContactAvatar 
                   src={request.userInfo?.photoURL || '/default-avatar.png'} 
                   alt={request.userInfo?.displayName}
@@ -346,39 +371,45 @@ const Contacts = () => {
             ))}
           </div>
         )}
-        {filteredContacts.map((contact) => (
-          <ContactItem 
-            key={contact.id} 
-            onClick={() => navigate(`/chat/${contact.contactId}`)}
-          >
-            <ContactAvatar 
-              src={contact.userInfo?.photoURL || '/default-avatar.png'} 
-              alt={contact.userInfo?.displayName}
-              roundedCircle
-            />
-            <ContactInfo>
-              <div className="d-flex align-items-center">
-                <ContactName>{contact.userInfo?.displayName || 'Unknown User'}</ContactName>
-                {getContactStatus(contact.contactId) && (
-                  <span className="ms-2" title={getContactStatus(contact.contactId).message}>
-                    {getStatusIcon(getContactStatus(contact.contactId).status)}
-                  </span>
+        
+        {filteredContacts.length > 0 && (
+          <div>
+            <h6 className="text-muted mb-3 px-3 pt-3">Your Contacts ({filteredContacts.length})</h6>
+            {filteredContacts.map((contact) => (
+              <ContactItem 
+                key={contact.id} 
+                onClick={() => navigate(`/chat/${contact.contactId}`)}
+              >
+                <ContactAvatar 
+                  src={contact.userInfo?.photoURL || '/default-avatar.png'} 
+                  alt={contact.userInfo?.displayName}
+                  roundedCircle
+                />
+                <ContactInfo>
+                  <div className="d-flex align-items-center">
+                    <ContactName>{contact.userInfo?.displayName || 'Unknown User'}</ContactName>
+                    {getContactStatus(contact.contactId) && (
+                      <span className="ms-2" title={getContactStatus(contact.contactId).message}>
+                        {getStatusIcon(getContactStatus(contact.contactId).status)}
+                      </span>
+                    )}
+                  </div>
+                  {contact.lastMessage && (
+                    <LastMessage>{contact.lastMessage}</LastMessage>
+                  )}
+                  {getContactStatus(contact.contactId) && (
+                    <small className="text-muted">
+                      {getContactStatus(contact.contactId).message}
+                    </small>
+                  )}
+                </ContactInfo>
+                {contact.lastChatAt && (
+                  <TimeAgo>{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
                 )}
-              </div>
-              {contact.lastMessage && (
-                <LastMessage>{contact.lastMessage}</LastMessage>
-              )}
-              {getContactStatus(contact.contactId) && (
-                <small className="text-muted">
-                  {getContactStatus(contact.contactId).message}
-                </small>
-              )}
-            </ContactInfo>
-            {contact.lastChatAt && (
-              <TimeAgo>{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
-            )}
-          </ContactItem>
-        ))}
+              </ContactItem>
+            ))}
+          </div>
+        )}
       </ContactList>
     );
   };
@@ -398,7 +429,7 @@ const Contacts = () => {
             <FiSearch />
           </InputGroup.Text>
           <SearchInput 
-            placeholder="Search contacts..."
+            placeholder="Search contacts by name or email..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);

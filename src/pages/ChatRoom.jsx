@@ -7,8 +7,8 @@ import {
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Card, Button, Form, Image, Spinner } from 'react-bootstrap';
-import { ArrowLeft, Send, Check2All, PersonCircle, BoxArrowRight } from 'react-bootstrap-icons';
+import { Container, Card, Button, Form, Image, Spinner, Alert } from 'react-bootstrap';
+import { ArrowLeft, Send, Check2All, PersonCircle, BoxArrowRight, Chat } from 'react-bootstrap-icons';
 import styled from 'styled-components';
 import { colors, shadows, borderRadius } from '../theme/colors';
 
@@ -40,6 +40,7 @@ const MessageList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
 `;
 
 const MessageBubble = styled.div`
@@ -51,6 +52,18 @@ const MessageBubble = styled.div`
   line-height: 1.4;
   font-size: 0.95rem;
   box-shadow: ${shadows.small};
+  animation: fadeInUp 0.3s ease-out;
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
   
   ${props => props.sent ? `
     align-self: flex-end;
@@ -77,6 +90,7 @@ const MessageInputContainer = styled.div`
   padding: 16px;
   background-color: ${colors.background};
   border-top: 1px solid ${colors.border};
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
 `;
 
 const SendButton = styled(Button)`
@@ -90,6 +104,7 @@ const SendButton = styled(Button)`
   justify-content: center;
   padding: 0;
   margin-left: 10px;
+  transition: all 0.2s ease;
   
   &:hover, &:focus {
     background-color: ${colors.primaryDark};
@@ -99,6 +114,11 @@ const SendButton = styled(Button)`
   &:active {
     transform: scale(0.95);
   }
+  
+  &:disabled {
+    background-color: ${colors.border};
+    transform: none;
+  }
 `;
 
 const BackButton = styled(Button)`
@@ -107,6 +127,8 @@ const BackButton = styled(Button)`
   color: ${colors.text};
   padding: 8px;
   margin-right: 10px;
+  border-radius: ${borderRadius.medium};
+  transition: all 0.2s ease;
   
   &:hover, &:focus {
     background-color: rgba(0, 0, 0, 0.05);
@@ -125,6 +147,7 @@ const UserAvatar = styled(Image)`
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
+  border: 2px solid ${colors.border};
 `;
 
 const UserName = styled.span`
@@ -141,11 +164,29 @@ const StatusBadge = styled.span`
   margin-right: 6px;
 `;
 
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: ${colors.textSecondary};
+  
+  svg {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: ${colors.primary};
+  }
+`;
+
 function ChatRoom() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [otherUser, setOtherUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const messagesEndRef = useRef(null);
   const user = auth.currentUser;
   const navigate = useNavigate();
@@ -162,15 +203,21 @@ function ChatRoom() {
       return;
     }
 
+    setLoading(true);
+    setError('');
+
     // Fetch other user's info
     const fetchOtherUser = async () => {
       try {
         const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
           setOtherUser({ id: userDoc.id, ...userDoc.data() });
+        } else {
+          setError('User not found');
         }
       } catch (error) {
         console.error('Error fetching user:', error);
+        setError('Failed to load user information');
       }
     };
 
@@ -199,6 +246,7 @@ function ChatRoom() {
             msgs.push({ id: doc.id, ...doc.data() });
           });
           setMessages(msgs);
+          setLoading(false);
           
           // Scroll to bottom after messages are rendered
           setTimeout(() => {
@@ -209,8 +257,8 @@ function ChatRoom() {
         },
         (error) => {
           console.error('Error in message listener:', error);
-          // Show error to user
-          alert('Error loading messages. Please refresh the page.');
+          setError('Error loading messages. Please refresh the page.');
+          setLoading(false);
         }
       );
       
@@ -220,6 +268,8 @@ function ChatRoom() {
       };
     } catch (error) {
       console.error('Error setting up message listener:', error);
+      setError('Failed to set up message listener');
+      setLoading(false);
       return () => {}; // Return empty cleanup function
     }
   }, [user, userId, navigate]);
@@ -263,7 +313,7 @@ function ChatRoom() {
         message: err.message,
         stack: err.stack
       });
-      alert(`Failed to send message: ${err.message}. Please check the console for details.`);
+      setError(`Failed to send message: ${err.message}. Please try again.`);
     } finally {
       setIsSending(false);
     }
@@ -275,21 +325,18 @@ function ChatRoom() {
       await setDoc(contactRef, {
         userId,
         contactId,
-        lastChatAt: serverTimestamp()
+        lastChatAt: serverTimestamp(),
+        lastMessage: newMessage.trim()
       }, { merge: true });
     } catch (error) {
       console.error('Error updating contact:', error);
     }
   };
 
-  // Removed unused generateInviteLink function
-
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/');
   };
-
-  // Removed unused handleBackToUsers function
 
   // Format message time
   const formatTime = (timestamp) => {
@@ -301,6 +348,19 @@ function ChatRoom() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  if (error) {
+    return (
+      <ChatContainer fluid>
+        <Alert variant="danger" className="m-3">
+          {error}
+          <Button variant="outline-danger" className="ms-3" onClick={() => navigate('/contacts')}>
+            Back to Contacts
+          </Button>
+        </Alert>
+      </ChatContainer>
+    );
+  }
 
   return (
     <ChatContainer fluid>
@@ -346,11 +406,18 @@ function ChatRoom() {
 
         {/* Messages */}
         <MessageList>
-          {messages.length === 0 ? (
-            <div className="h-100 d-flex flex-column justify-content-center align-items-center" style={{ color: colors.textSecondary }}>
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center h-100">
+              <Spinner animation="border" role="status">
+                <span className="visually-hidden">Loading messages...</span>
+              </Spinner>
+            </div>
+          ) : messages.length === 0 ? (
+            <EmptyState>
+              <Chat />
               <div className="mb-2">No messages yet</div>
               <small>Start the conversation!</small>
-            </div>
+            </EmptyState>
           ) : (
             messages.map((msg) => (
               <MessageBubble 

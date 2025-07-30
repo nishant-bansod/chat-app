@@ -11,11 +11,24 @@ import {
   where, 
   getDocs, 
   writeBatch, 
-  updateDoc 
+  updateDoc,
+  addDoc 
 } from 'firebase/firestore';
 import { Container, Card, Button, Alert, Spinner } from 'react-bootstrap';
 import { onAuthStateChanged } from 'firebase/auth';
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+
+export async function createInvite(currentUser) {
+  const invitesRef = collection(db, 'invites');
+  const docRef = await addDoc(invitesRef, {
+    inviterId: currentUser.uid,
+    inviterName: currentUser.displayName || currentUser.email,
+    inviterPhoto: currentUser.photoURL || '',
+    createdAt: serverTimestamp(),
+    status: 'pending',
+  });
+  return `${window.location.origin}/invite/${docRef.id}`;
+}
 
 function Invite() {
   const { inviteId } = useParams();

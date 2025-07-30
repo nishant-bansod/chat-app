@@ -241,7 +241,7 @@ function Login() {
   return (
     <LoginContainer>
       <LoginCard>
-        <Title>BumbleChat</Title>
+        <Title>Nishant Chat Room</Title>
         <Subtitle>Connect with friends in real-time</Subtitle>
         
         {error && <Alert variant="danger">{error}</Alert>}

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Alert, Spinner, ListGroup, InputGroup, Toast } from 'react-bootstrap';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Modal, Form, Button, Alert, Spinner, ListGroup, InputGroup } from 'react-bootstrap';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, or } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { FiSearch, FiUserPlus, FiCheck, FiX } from 'react-icons/fi';
+import { FiSearch, FiUserPlus, FiCheck } from 'react-icons/fi';
 
 function AddContactModal({ show, onHide, onContactAdded }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -21,50 +20,42 @@ function AddContactModal({ show, onHide, onContactAdded }) {
     return () => unsubscribe();
   }, []);
 
-  // Clear messages when modal opens/closes
-  useEffect(() => {
-    if (show) {
-      setError('');
-      setSuccess('');
-      setSearchResults([]);
-      setSearchTerm('');
-    }
-  }, [show]);
-
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
     
     setError('');
-    setSuccess('');
     setSearching(true);
     
     try {
       const usersRef = collection(db, 'users');
-      const search = searchTerm.trim().toLowerCase();
-      const q = query(usersRef);
+      const q = query(
+        usersRef,
+        or(
+          where('email', '>=', searchTerm.trim().toLowerCase()),
+          where('email', '<=', searchTerm.trim().toLowerCase() + '\uf8ff'),
+          where('username', '>=', searchTerm.trim().toLowerCase()),
+          where('username', '<=', searchTerm.trim().toLowerCase() + '\uf8ff')
+        )
+      );
+      
       const querySnapshot = await getDocs(q);
       const results = [];
+      
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        if (
-          userData.uid !== currentUser?.uid &&
-          (
-            (userData.email && userData.email.toLowerCase().includes(search)) ||
-            (userData.displayName && userData.displayName.toLowerCase().includes(search))
-          )
-        ) {
+        if (userData.uid !== currentUser?.uid) {
           results.push({
             id: doc.id,
             ...userData
           });
         }
       });
+      
       setSearchResults(results);
+      
       if (results.length === 0) {
-        setError('No users found with that email or name.');
-      } else {
-        setSuccess(`Found ${results.length} user(s)`);
+        setError('No users found with that email or username');
       }
     } catch (err) {
       console.error('Error searching for users:', err);
@@ -78,7 +69,6 @@ function AddContactModal({ show, onHide, onContactAdded }) {
     if (!currentUser) return;
     
     setError('');
-    setSuccess('');
     setLoading(true);
     
     try {
@@ -86,8 +76,8 @@ function AddContactModal({ show, onHide, onContactAdded }) {
       const requestsRef = collection(db, 'contactRequests');
       const q = query(
         requestsRef,
-        where('fromUid', '==', currentUser.uid),
-        where('toUid', '==', user.uid),
+        where('from', '==', currentUser.uid),
+        where('to', '==', user.uid),
         where('status', '==', 'pending')
       );
       
@@ -101,15 +91,16 @@ function AddContactModal({ show, onHide, onContactAdded }) {
       // Create a new contact request
       const requestRef = doc(collection(db, 'contactRequests'));
       await setDoc(requestRef, {
-        fromUid: currentUser.uid,
-        toUid: user.uid,
+        id: requestRef.id,
+        from: currentUser.uid,
+        to: user.uid,
         status: 'pending',
         createdAt: serverTimestamp(),
         userInfo: {
-          uid: user.uid,
-          displayName: user.displayName || user.email,
-          email: user.email,
-          photoURL: user.photoURL
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || currentUser.email,
+          email: currentUser.email,
+          photoURL: currentUser.photoURL
         }
       });
       
@@ -120,15 +111,24 @@ function AddContactModal({ show, onHide, onContactAdded }) {
         )
       );
       
-      setSuccess(`Contact request sent to ${user.displayName || user.username}!`);
-      
       if (onContactAdded) {
         onContactAdded();
       }
       
     } catch (err) {
       console.error('Error sending contact request:', err);
-      setError('Failed to send contact request. Please try again.');
+      
+      if (err.message.includes('permission-denied')) {
+        setError('You do not have permission to perform this action');
+      } else if (err.message.includes('not-found')) {
+        setError('User not found. Please check the username and try again.');
+      } else if (err.message.includes('already exists')) {
+        setError('A contact request is already pending with this user');
+      } else if (err.message.includes('already contacts')) {
+        setError('You are already contacts with this user');
+      } else {
+        setError('Failed to send contact request. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -141,13 +141,12 @@ function AddContactModal({ show, onHide, onContactAdded }) {
       </Modal.Header>
       <Modal.Body>
         {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
-        {success && <Alert variant="success" className="mb-3">{success}</Alert>}
         
         <Form onSubmit={handleSearch} className="mb-4">
           <InputGroup>
             <Form.Control
               type="text"
-              placeholder="Search by email or name (e.g., john@example.com or John)"
+              placeholder="Search by email or username"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={searching || loading}
@@ -188,7 +187,7 @@ function AddContactModal({ show, onHide, onContactAdded }) {
                     )}
                     <div>
                       <div className="fw-bold">{user.displayName || 'User'}</div>
-                      <small className="text-muted">@{user.username}</small>
+                      <small className="text-muted">{user.email}</small>
                     </div>
                   </div>
                   <Button 
@@ -216,7 +215,7 @@ function AddContactModal({ show, onHide, onContactAdded }) {
         {searchResults.length === 0 && searchTerm && !searching && !error && (
           <div className="text-center py-4">
             <p>No users found matching "{searchTerm}"</p>
-            <p className="text-muted small">Try searching by exact username</p>
+            <p className="text-muted small">Try searching by email or username</p>
           </div>
         )}
       </Modal.Body>

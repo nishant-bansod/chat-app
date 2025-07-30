@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
-import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Login from './pages/Login';
 import ChatRoom from './pages/ChatRoom';
 import Invite from './pages/Invite';
 import Contacts from './pages/Contacts';
-import UsernameSetup from './components/UsernameSetup';
+import NotificationToast from './components/NotificationToast';
+import { useNotifications } from './hooks/useNotifications';
 
 // Apply theme class to body for global styles
 const applyThemeClass = () => {
@@ -18,32 +18,22 @@ const applyThemeClass = () => {
   };
 };
 
-// Protected route that checks for authentication and username setup
+// Protected route that checks for authentication
 const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
-  const [needsUsername, setNeedsUsername] = useState(false);
+  const [user, setUser] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const user = auth.currentUser;
-        
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-
-        // Check if user has a username set
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        setNeedsUsername(!userDoc.exists() || !userDoc.data()?.username);
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-      } finally {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
         setLoading(false);
+        return;
       }
+      setUser(currentUser);
+      setLoading(false);
     };
-
     checkAuth();
   }, [location.pathname]);
 
@@ -55,12 +45,8 @@ const ProtectedRoute = ({ children }) => {
     </div>;
   }
 
-  if (!auth.currentUser) {
+  if (!user) {
     return <Navigate to="/" state={{ from: location }} replace />;
-  }
-
-  if (needsUsername) {
-    return <UsernameSetup />;
   }
 
   return children;
@@ -68,14 +54,18 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   const [initialized, setInitialized] = useState(false);
+  const { notifications, addNotification, removeNotification } = useNotifications();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setInitialized(true);
+      if (user) {
+        addNotification(`Welcome back, ${user.displayName || user.email}!`, 'success', 3000);
+      }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [addNotification]);
 
   useEffect(() => {
     return applyThemeClass();
@@ -128,6 +118,12 @@ function App() {
           />
         </Routes>
       </BrowserRouter>
+      
+      {/* Notification System */}
+      <NotificationToast 
+        notifications={notifications} 
+        onRemove={removeNotification} 
+      />
     </ThemeProvider>
   );
 }
