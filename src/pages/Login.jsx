@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, provider, db } from '../firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Form, Alert, InputGroup } from 'react-bootstrap';
+import { useAuth } from '../context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import styled from 'styled-components';
 import { FaGoogle, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowRight } from 'react-icons/fa';
@@ -168,6 +169,8 @@ const PasswordToggle = styled(Button)`
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -175,6 +178,13 @@ function Login() {
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const redirectTo = location.state?.from?.pathname || '/contacts';
+      navigate(redirectTo, { replace: true });
+    }
+  }, [user, navigate, location]);
 
   // Store minimal user data in Firestore
   const saveUser = async (user) => {
@@ -200,10 +210,8 @@ function Login() {
     try {
       const result = await signInWithPopup(auth, provider);
       await saveUser(result.user);
-      // Wait for Firebase auth state to be updated
-      await new Promise(resolve => setTimeout(resolve, 1000));
       // The ProtectedRoute will handle redirection to username setup if needed
-      navigate('/contacts', { replace: true });
+      navigate('/contacts');
     } catch (err) {
       console.error('Google login error:', err);
       setError(err.message || 'Failed to sign in with Google');
@@ -235,9 +243,7 @@ function Login() {
         console.log('Sign in successful', result);
         await saveUser(result.user);
       }
-      // Wait for Firebase auth state to be updated
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate('/contacts', { replace: true });
+      navigate('/contacts');
     } catch (err) {
       console.error('Email login error:', err);
       setError((err && err.message) ? err.message : 'Failed to sign in. Please try again.');

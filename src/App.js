@@ -20,17 +20,8 @@ const applyThemeClass = () => {
 
 // Protected route that checks for authentication
 const ProtectedRoute = ({ children }) => {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const { user, loading } = useAuth();
   const location = useLocation();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   if (loading) {
     return <div className="d-flex justify-content-center align-items-center vh-100">
@@ -77,7 +68,8 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <Routes>
+        <AuthProvider>
+          <Routes>
           <Route path="/" element={<Login />} />
           <Route
             path="/contacts"
@@ -112,6 +104,7 @@ function App() {
             }
           />
         </Routes>
+        </AuthProvider>
       </BrowserRouter>
       
       {/* Notification System */}
