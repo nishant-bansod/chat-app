@@ -25,17 +25,12 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        setLoading(false);
-        return;
-      }
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
-    };
-    checkAuth();
-  }, [location.pathname]);
+    });
+    return () => unsubscribe();
+  }, []);
 
   if (loading) {
     return <div className="d-flex justify-content-center align-items-center vh-100">
