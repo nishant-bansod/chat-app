@@ -213,26 +213,32 @@ function Login() {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError('');
-    
+    console.log('Login form submitted', { email, password, isRegister });
     if (isRegister && (!email || !password)) {
       setError('Please enter both email and password');
+      console.warn('Missing email or password');
       return;
     }
-    
     setLoading(true);
     try {
+      let result;
       if (isRegister) {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('Attempting registration...');
+        result = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('Registration successful', result);
         await saveUser(result.user);
       } else {
-        const result = await signInWithEmailAndPassword(auth, email, password);
+        console.log('Attempting sign in...');
+        result = await signInWithEmailAndPassword(auth, email, password);
+        console.log('Sign in successful', result);
         await saveUser(result.user);
       }
-      // The ProtectedRoute will handle redirection to username setup if needed
       navigate('/contacts');
     } catch (err) {
       console.error('Email login error:', err);
-      setError(err.message || 'Failed to sign in. Please try again.');
+      setError((err && err.message) ? err.message : 'Failed to sign in. Please try again.');
+      // Show alert if error is not visible
+      alert('Login error: ' + ((err && err.message) ? err.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
