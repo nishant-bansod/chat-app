@@ -54,11 +54,10 @@ function App() {
     return applyThemeClass();
   }, []);
 
-  const { loading } = useAuth();
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <BrowserRouter>
           {loading ? (
             <div className="d-flex justify-content-center align-items-center vh-100">
               <div className="spinner-border" role="status">
@@ -109,9 +108,9 @@ function App() {
               />
             </div>
           )}
-        </AuthProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+        </BrowserRouter>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
