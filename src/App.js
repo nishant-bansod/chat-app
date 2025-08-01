@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -38,31 +38,12 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
-  const [initialized, setInitialized] = useState(false);
-  const { notifications, addNotification, removeNotification } = useNotifications();
+  const { notifications, removeNotification } = useNotifications();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setInitialized(true);
-      if (user) {
-        addNotification(`Welcome back, ${user.displayName || user.email}!`, 'success', 3000);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [addNotification]);
-
-  useEffect(() => {
+  // Apply theme class
+  React.useEffect(() => {
     return applyThemeClass();
   }, []);
-
-  if (!initialized) {
-    return <div className="d-flex justify-content-center align-items-center vh-100">
-      <div className="spinner-border" role="status">
-        <span className="visually-hidden">Loading...</span>
-      </div>
-    </div>;
-  }
 
   return (
     <ThemeProvider>

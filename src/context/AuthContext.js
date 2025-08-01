@@ -11,10 +11,18 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
+    console.log('Setting up auth listener');
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log('Auth state changed:', firebaseUser ? 'logged in' : 'logged out');
       setUser(firebaseUser);
+      setLoading(false);
+      setAuthError(null);
+    }, (error) => {
+      console.error('Auth error:', error);
+      setAuthError(error);
       setLoading(false);
     });
 
@@ -23,7 +31,9 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    loading
+    loading,
+    authError,
+    isAuthenticated: !!user
   };
 
   return (
