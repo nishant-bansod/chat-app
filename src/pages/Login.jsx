@@ -200,8 +200,10 @@ function Login() {
     try {
       const result = await signInWithPopup(auth, provider);
       await saveUser(result.user);
+      // Wait for Firebase auth state to be updated
+      await new Promise(resolve => setTimeout(resolve, 1000));
       // The ProtectedRoute will handle redirection to username setup if needed
-      navigate('/contacts');
+      navigate('/contacts', { replace: true });
     } catch (err) {
       console.error('Google login error:', err);
       setError(err.message || 'Failed to sign in with Google');
@@ -233,7 +235,9 @@ function Login() {
         console.log('Sign in successful', result);
         await saveUser(result.user);
       }
-      navigate('/contacts');
+      // Wait for Firebase auth state to be updated
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      navigate('/contacts', { replace: true });
     } catch (err) {
       console.error('Email login error:', err);
       setError((err && err.message) ? err.message : 'Failed to sign in. Please try again.');
