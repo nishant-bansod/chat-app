@@ -9,6 +9,7 @@ import Invite from './pages/Invite';
 import Contacts from './pages/Contacts';
 import NotificationToast from './components/NotificationToast';
 import { useNotifications } from './hooks/useNotifications';
+import { colors } from './theme/colors';
 
 // Apply theme class to body for global styles
 const applyThemeClass = () => {
