@@ -210,8 +210,7 @@ function Login() {
     try {
       const result = await signInWithPopup(auth, provider);
       await saveUser(result.user);
-      // The ProtectedRoute will handle redirection to username setup if needed
-      navigate('/contacts');
+      // Let the useEffect handle navigation after auth state changes
     } catch (err) {
       console.error('Google login error:', err);
       setError(err.message || 'Failed to sign in with Google');
@@ -243,7 +242,7 @@ function Login() {
         console.log('Sign in successful', result);
         await saveUser(result.user);
       }
-      navigate('/contacts');
+      // Let the useEffect handle navigation after auth state changes
     } catch (err) {
       console.error('Email login error:', err);
       setError((err && err.message) ? err.message : 'Failed to sign in. Please try again.');

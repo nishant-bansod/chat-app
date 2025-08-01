@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
-import { auth } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import ChatRoom from './pages/ChatRoom';
 import Invite from './pages/Invite';
