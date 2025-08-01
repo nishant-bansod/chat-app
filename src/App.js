@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import Header from './components/Header';
 import Login from './pages/Login';
 import ChatRoom from './pages/ChatRoom';
 import Invite from './pages/Invite';
@@ -34,7 +35,14 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  return children;
+  return (
+    <>
+      <Header />
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {children}
+      </div>
+    </>
+  );
 };
 
 function App() {
@@ -49,16 +57,17 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-          <Route path="/" element={<Login />} />
-          <Route
-            path="/contacts"
-            element={
-              <ProtectedRoute>
-                <Contacts />
-              </ProtectedRoute>
-            }
-          />
+          <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route
+                path="/contacts"
+                element={
+                  <ProtectedRoute>
+                    <Contacts />
+                  </ProtectedRoute>
+                }
+              />
           <Route
             path="/invite/:inviteId"
             element={
@@ -83,15 +92,15 @@ function App() {
               </ProtectedRoute>
             }
           />
-        </Routes>
+            </Routes>
+            {/* Notification System */}
+            <NotificationToast 
+              notifications={notifications} 
+              onRemove={removeNotification} 
+            />
+          </div>
         </AuthProvider>
       </BrowserRouter>
-      
-      {/* Notification System */}
-      <NotificationToast 
-        notifications={notifications} 
-        onRemove={removeNotification} 
-      />
     </ThemeProvider>
   );
 }
