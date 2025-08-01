@@ -60,10 +60,10 @@ function Header() {
     <HeaderContainer>
       <UserInfo>
         {user?.photoURL && <UserImage src={user.photoURL} alt="Profile" />}
-        <span>{user?.displayName || user?.email}</span>
+        <span style={{ fontWeight: 700, fontSize: '1.1rem', color: colors.primary }}>{user?.displayName || user?.email}</span>
       </UserInfo>
-      <LogoutButton onClick={handleLogout}>
-        Logout
+      <LogoutButton onClick={handleLogout} style={{ fontWeight: 700, background: colors.primary, color: colors.secondary, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <span style={{ marginRight: 8 }}>🔒</span> Logout
       </LogoutButton>
     </HeaderContainer>
   );

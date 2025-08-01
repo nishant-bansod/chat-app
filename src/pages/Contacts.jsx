@@ -104,10 +104,9 @@ const Contacts = () => {
           lastMessage: null
         });
       }
-      // Update the request status
+      // Update the request status (only status field, per Firestore rules)
       await updateDoc(doc(db, 'contactRequests', request.id), {
-        status: response,
-        updatedAt: new Date()
+        status: response
       });
       // Remove from local state
       setRequests(requests.filter(req => req.id !== request.id));

@@ -53,52 +53,61 @@ function App() {
     return applyThemeClass();
   }, []);
 
+  const { loading } = useAuth();
   return (
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <Routes>
-              <Route path="/" element={<Login />} />
-              <Route
-                path="/contacts"
-                element={
-                  <ProtectedRoute>
-                    <Contacts />
-                  </ProtectedRoute>
-                }
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center vh-100">
+              <div className="spinner-border" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          ) : (
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.surface }}>
+              <Routes>
+                <Route path="/" element={<Login />} />
+                <Route
+                  path="/contacts"
+                  element={
+                    <ProtectedRoute>
+                      <Contacts />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invite/:inviteId"
+                  element={
+                    <ProtectedRoute>
+                      <Invite />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/chat"
+                  element={
+                    <ProtectedRoute>
+                      <ChatRoom />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/chat/:userId"
+                  element={
+                    <ProtectedRoute>
+                      <ChatRoom />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+              {/* Notification System */}
+              <NotificationToast 
+                notifications={notifications} 
+                onRemove={removeNotification} 
               />
-          <Route
-            path="/invite/:inviteId"
-            element={
-              <ProtectedRoute>
-                <Invite />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <ChatRoom />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chat/:userId"
-            element={
-              <ProtectedRoute>
-                <ChatRoom />
-              </ProtectedRoute>
-            }
-          />
-            </Routes>
-            {/* Notification System */}
-            <NotificationToast 
-              notifications={notifications} 
-              onRemove={removeNotification} 
-            />
-          </div>
+            </div>
+          )}
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

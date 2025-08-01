@@ -1,17 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own data
+    // Users collection - public profiles
     match /users/{userId} {
+      // Allow reading user profiles (for search)
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Users can only write their own profile
+      allow write: if request.auth.uid == userId;
+      // Allow querying users by username
+      match /{document=**} {
+        allow list: if request.auth != null &&
+          request.query.limit != null &&
+          request.query.where.fieldPath == 'username';
+      }
     }
 
-    // Allow users to manage their contacts
-    match /contacts/{contactId} {
-      allow read, write: if request.auth != null && 
-        (contactId.matches(request.auth.uid + '_.*') || 
-         contactId.matches('.*_' + request.auth.uid));
+    // Contacts collection - only owner can access
+    match /contacts/{docId} {
+      // Owner can read/update/delete their own contact docs
+      allow read, update, delete: if request.auth != null &&
+        resource.data.userId == request.auth.uid;
+      // Allow creation when the userId in the NEW doc matches the requester
+      allow create: if request.auth != null &&
+        request.resource.data.userId == request.auth.uid;
     }
     // Messages collection - allow querying by chatId and ensure proper access
     match /messages/{messageId} {
