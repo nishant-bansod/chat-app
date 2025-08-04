@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -58,59 +58,70 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <BrowserRouter>
-          {loading ? (
-            <div className="d-flex justify-content-center align-items-center vh-100">
-              <div className="spinner-border" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-            </div>
-          ) : (
-            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.surface }}>
-              <Routes>
-                <Route path="/" element={<Login />} />
-                <Route
-                  path="/contacts"
-                  element={
-                    <ProtectedRoute>
-                      <Contacts />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/invite/:inviteId"
-                  element={
-                    <ProtectedRoute>
-                      <Invite />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/chat"
-                  element={
-                    <ProtectedRoute>
-                      <ChatRoom />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/chat/:userId"
-                  element={
-                    <ProtectedRoute>
-                      <ChatRoom />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-              {/* Notification System */}
-              <NotificationToast 
-                notifications={notifications} 
-                onRemove={removeNotification} 
-              />
-            </div>
-          )}
+          <AppContent notifications={notifications} removeNotification={removeNotification} />
         </BrowserRouter>
       </ThemeProvider>
     </AuthProvider>
+  );
+}
+
+// Separate component to use auth context
+function AppContent({ notifications, removeNotification }) {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.surface }}>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <Contacts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invite/:inviteId"
+          element={
+            <ProtectedRoute>
+              <Invite />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatRoom />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat/:userId"
+          element={
+            <ProtectedRoute>
+              <ChatRoom />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      {/* Notification System */}
+      <NotificationToast 
+        notifications={notifications} 
+        onRemove={removeNotification} 
+      />
+    </div>
   );
 }
 
