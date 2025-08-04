@@ -240,35 +240,3 @@ if (process.env.NODE_ENV === 'development') {
 }
 ```
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Test thoroughly
-5. Commit: `git commit -m 'Add feature'`
-6. Push: `git push origin feature-name`
-7. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Firebase for the excellent real-time database
-- React Bootstrap for the UI components
-- Bumble for the design inspiration
-- The React community for the amazing ecosystem
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-1. Check the troubleshooting section above
-2. Review Firebase documentation
-3. Open an issue on GitHub
-4. Check the browser console for error messages
-
----
-
-**Happy Chatting! 🐝**
