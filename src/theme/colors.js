@@ -36,25 +36,25 @@ export const lightColors = {
 };
 
 export const darkColors = {
-  // Dark theme color palette
+  // WhatsApp-style dark theme with Bumble yellow branding
   primary: '#FFCD1F',  // Keep Bumble yellow for brand consistency
   primaryDark: '#E5B91C',  // Darker yellow for hover states
   secondary: '#FFFFFF',  // White for text in dark mode
-  background: '#000000',  // Pure black background for maximum contrast
-  surface: '#0F0F0F',  // Very dark surface
+  background: '#111B21',  // WhatsApp dark background
+  surface: '#202C33',  // WhatsApp dark surface
   accent: '#FF7E47',  // Keep accent color
-  text: '#FFFFFF',  // White text for maximum visibility
-  textSecondary: '#CCCCCC',  // Light gray for secondary text
-  border: '#1A1A1A',  // Dark border
+  text: '#E9EDEF',  // WhatsApp light text
+  textSecondary: '#8696A0',  // WhatsApp secondary text
+  border: '#374045',  // WhatsApp border color
   success: '#4CAF50',  // Success color
   error: '#F44336',  // Error color
   
   // Chat specific colors
   chatBubbleSent: '#FFCD1F',  // Keep yellow for sent messages
-  chatBubbleReceived: '#0F0F0F',  // Very dark gray for received messages
+  chatBubbleReceived: '#202C33',  // WhatsApp dark surface for received messages
   chatTextSent: '#1A1A1A',  // Dark text on yellow
-  chatTextReceived: '#FFFFFF',  // White text on dark gray
-  chatTime: '#AAAAAA',  // Lighter message timestamp color for better visibility
+  chatTextReceived: '#E9EDEF',  // WhatsApp light text on dark surface
+  chatTime: '#8696A0',  // WhatsApp secondary text for timestamps
   
   // Button variants
   buttonPrimary: '#FFCD1F',
@@ -62,14 +62,14 @@ export const darkColors = {
   buttonText: '#1A1A1A',
   
   // Header
-  headerBackground: '#0F0F0F',
-  headerText: '#FFFFFF',
+  headerBackground: '#202C33',  // WhatsApp dark surface
+  headerText: '#E9EDEF',  // WhatsApp light text
   
   // Input fields
-  inputBackground: '#0F0F0F',
-  inputBorder: '#1A1A1A',
-  inputFocus: '#FFCD1F',
-  inputText: '#FFFFFF'
+  inputBackground: '#202C33',  // WhatsApp dark surface
+  inputBorder: '#374045',  // WhatsApp border
+  inputFocus: '#FFCD1F',  // Keep yellow focus
+  inputText: '#E9EDEF'  // WhatsApp light text
 };
 
 // Default to light theme
