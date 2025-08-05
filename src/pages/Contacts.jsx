@@ -9,7 +9,8 @@ import {
   orderBy,
   onSnapshot,
   updateDoc,
-  setDoc
+  setDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -187,6 +188,12 @@ const Contacts = () => {
   const respondRequest = async (request, response) => {
     try {
       if (!currentUser) throw new Error('No current user');
+      
+      // First update the request status
+      await updateDoc(doc(db, 'contactRequests', request.id), {
+        status: response
+      });
+      
       if (response === 'accepted') {
         // Create a contact for both users
         const contactRef1 = doc(collection(db, 'contacts'));
@@ -195,25 +202,23 @@ const Contacts = () => {
           contactId: request.userInfo.uid,
           displayName: request.userInfo.displayName,
           photoURL: request.userInfo.photoURL,
-          createdAt: new Date(),
+          createdAt: serverTimestamp(),
           lastChatAt: null,
           lastMessage: null
         });
+        
         const contactRef2 = doc(collection(db, 'contacts'));
         await setDoc(contactRef2, {
           userId: request.userInfo.uid,
           contactId: currentUser.uid,
           displayName: currentUser.displayName,
           photoURL: currentUser.photoURL,
-          createdAt: new Date(),
+          createdAt: serverTimestamp(),
           lastChatAt: null,
           lastMessage: null
         });
       }
-      // Update the request status (only status field, per Firestore rules)
-      await updateDoc(doc(db, 'contactRequests', request.id), {
-        status: response
-      });
+      
       // Remove from local state
       setRequests(requests.filter(req => req.id !== request.id));
     } catch (error) {
