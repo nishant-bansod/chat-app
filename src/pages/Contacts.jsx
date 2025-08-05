@@ -592,10 +592,10 @@ const Contacts = () => {
   // Render the component
   return (
     <ContactsContainer>
-      <Header style={{ backgroundColor: colors.primary, color: colors.text }}>
+      <Header style={{ backgroundColor: colors.headerBackground, color: colors.headerText }}>
         <div className="d-flex justify-content-between align-items-center w-100">
           <div>
-            <Title style={{ color: colors.text }}>Contacts</Title>
+            <Title style={{ color: colors.headerText }}>Contacts</Title>
             {currentUser && (
               <div style={{ fontSize: '0.95rem', color: colors.textSecondary, marginTop: 4 }}>
                 Logged in as: <strong>{currentUser.email}</strong>

@@ -1,23 +1,23 @@
 export const lightColors = {
-  // Bumble-inspired color palette
+  // Clean light theme - Bumble yellow branding
   primary: '#FFCD1F',  // Bumble yellow
   primaryDark: '#E5B91C',  // Darker yellow for hover states
-  secondary: '#1A1A1A',  // Dark brown/black for text
-  background: '#FFFFFF',  // White background
-  surface: '#F8F8F8',  // Light gray background
-  accent: '#FF7E47',  // Accent color (coral/orange)
-  text: '#1A1A1A',  // Main text color - dark for good contrast
-  textSecondary: '#555555',  // Darker secondary text for better visibility
-  border: '#E0E0E0',  // Border color
-  success: '#4CAF50',  // Success color
-  error: '#F44336',  // Error color
+  secondary: '#1A1A1A',  // Dark text
+  background: '#FFFFFF',  // Pure white background
+  surface: '#F8F9FA',  // Very light gray surface
+  accent: '#FF7E47',  // Accent color
+  text: '#1A1A1A',  // Dark text
+  textSecondary: '#6C757D',  // Medium gray secondary text
+  border: '#DEE2E6',  // Light border
+  success: '#28A745',  // Success color
+  error: '#DC3545',  // Error color
   
   // Chat specific colors
-  chatBubbleSent: '#FFCD1F',  // Sent message bubble (yellow)
-  chatBubbleReceived: '#F0F0F0',  // Received message bubble (light gray)
-  chatTextSent: '#1A1A1A',  // Sent message text
-  chatTextReceived: '#1A1A1A',  // Received message text
-  chatTime: '#666666',  // Darker message timestamp color for better visibility
+  chatBubbleSent: '#FFCD1F',  // Yellow sent messages
+  chatBubbleReceived: '#F8F9FA',  // Light gray received messages
+  chatTextSent: '#1A1A1A',  // Dark text on yellow
+  chatTextReceived: '#1A1A1A',  // Dark text on light gray
+  chatTime: '#6C757D',  // Medium gray timestamps
   
   // Button variants
   buttonPrimary: '#FFCD1F',
@@ -25,36 +25,36 @@ export const lightColors = {
   buttonText: '#1A1A1A',
   
   // Header
-  headerBackground: '#FFFFFF',
-  headerText: '#1A1A1A',
+  headerBackground: '#FFCD1F',  // Yellow header
+  headerText: '#1A1A1A',  // Dark text on yellow
   
   // Input fields
-  inputBackground: '#FFFFFF',
-  inputBorder: '#E0E0E0',
-  inputFocus: '#FFCD1F',
-  inputText: '#1A1A1D'
+  inputBackground: '#FFFFFF',  // White input background
+  inputBorder: '#DEE2E6',  // Light border
+  inputFocus: '#FFCD1F',  // Yellow focus
+  inputText: '#1A1A1A'  // Dark input text
 };
 
 export const darkColors = {
-  // WhatsApp-style dark theme with Bumble yellow branding
-  primary: '#FFCD1F',  // Keep Bumble yellow for brand consistency
+  // Clean dark theme - Pure dark with yellow accents
+  primary: '#FFCD1F',  // Bumble yellow (only for accents)
   primaryDark: '#E5B91C',  // Darker yellow for hover states
-  secondary: '#FFFFFF',  // White for text in dark mode
-  background: '#111B21',  // WhatsApp dark background
-  surface: '#202C33',  // WhatsApp dark surface
-  accent: '#FF7E47',  // Keep accent color
-  text: '#E9EDEF',  // WhatsApp light text
-  textSecondary: '#8696A0',  // WhatsApp secondary text
-  border: '#374045',  // WhatsApp border color
-  success: '#4CAF50',  // Success color
-  error: '#F44336',  // Error color
+  secondary: '#FFFFFF',  // White text
+  background: '#000000',  // Pure black background
+  surface: '#1A1A1A',  // Dark gray surface
+  accent: '#FF7E47',  // Accent color
+  text: '#FFFFFF',  // White text
+  textSecondary: '#B0B0B0',  // Light gray secondary text
+  border: '#333333',  // Dark border
+  success: '#28A745',  // Success color
+  error: '#DC3545',  // Error color
   
   // Chat specific colors
-  chatBubbleSent: '#FFCD1F',  // Keep yellow for sent messages
-  chatBubbleReceived: '#202C33',  // WhatsApp dark surface for received messages
+  chatBubbleSent: '#FFCD1F',  // Yellow sent messages
+  chatBubbleReceived: '#1A1A1A',  // Dark gray received messages
   chatTextSent: '#1A1A1A',  // Dark text on yellow
-  chatTextReceived: '#E9EDEF',  // WhatsApp light text on dark surface
-  chatTime: '#8696A0',  // WhatsApp secondary text for timestamps
+  chatTextReceived: '#FFFFFF',  // White text on dark gray
+  chatTime: '#B0B0B0',  // Light gray timestamps
   
   // Button variants
   buttonPrimary: '#FFCD1F',
@@ -62,14 +62,14 @@ export const darkColors = {
   buttonText: '#1A1A1A',
   
   // Header
-  headerBackground: '#202C33',  // WhatsApp dark surface
-  headerText: '#E9EDEF',  // WhatsApp light text
+  headerBackground: '#1A1A1A',  // Dark gray header
+  headerText: '#FFFFFF',  // White text on dark header
   
   // Input fields
-  inputBackground: '#202C33',  // WhatsApp dark surface
-  inputBorder: '#374045',  // WhatsApp border
-  inputFocus: '#FFCD1F',  // Keep yellow focus
-  inputText: '#E9EDEF'  // WhatsApp light text
+  inputBackground: '#1A1A1A',  // Dark input background
+  inputBorder: '#333333',  // Dark border
+  inputFocus: '#FFCD1F',  // Yellow focus
+  inputText: '#FFFFFF'  // White input text
 };
 
 // Default to light theme
