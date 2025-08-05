@@ -1,4 +1,4 @@
-# BumbleChat - Real-time Chat Application
+# Nishant Chat Room - Real-time Chat Application
 
 A modern, real-time chat application built with React and Firebase, featuring a beautiful Bumble-inspired design.
 
