@@ -37,6 +37,10 @@ const ChatHeader = styled(Card.Header)`
   align-items: center;
   box-shadow: ${shadows.small};
   z-index: 10;
+  
+  @media (max-width: 768px) {
+    padding: 10px 15px;
+  }
 `;
 
 const MessageList = styled.div`
@@ -123,9 +127,13 @@ const MessageInputContainer = styled.div`
   background-color: ${colors.background};
   border-top: 1px solid ${colors.border};
   box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 10px;
   
   @media (max-width: 768px) {
     padding: 12px;
+    gap: 8px;
   }
 `;
 
@@ -493,14 +501,14 @@ function ChatRoom() {
 
         {/* Message Input */}
         <MessageInputContainer>
-          <Form onSubmit={handleSend} className="d-flex">
+          <Form onSubmit={handleSend} className="d-flex w-100">
             <Form.Control
               as="input"
               type="text"
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              className="rounded-pill me-2"
+              className="rounded-pill me-2 flex-grow-1"
               style={{
                 padding: '10px 20px',
                 border: `1px solid ${colors.border}`,

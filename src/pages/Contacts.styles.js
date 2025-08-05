@@ -67,6 +67,7 @@ export const ContactList = styled(ListGroup)`
 export const ContactItem = styled(ListGroup.Item)`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 15px 20px;
   border: none;
   border-bottom: 1px solid ${colors.border};
@@ -106,6 +107,9 @@ export const ContactAvatar = styled(Image)`
 export const ContactInfo = styled.div`
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 `;
 
 export const ContactName = styled.div`
@@ -130,6 +134,7 @@ export const TimeAgo = styled.div`
   color: ${colors.textSecondary};
   text-align: right;
   margin-left: 10px;
+  white-space: nowrap;
 `;
 
 export const ActionButton = styled(Button)`

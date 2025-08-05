@@ -566,7 +566,7 @@ const Contacts = () => {
                     </small>
                   )}
                 </ContactInfo>
-                <div className="d-flex align-items-center">
+                <div className="d-flex align-items-center justify-content-end">
                   {contact.lastChatAt && (
                     <TimeAgo className="me-2">{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
                   )}

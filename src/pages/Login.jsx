@@ -29,6 +29,11 @@ const LoginCard = styled.div`
   text-align: center;
   position: relative;
   overflow: hidden;
+  
+  @media (max-width: 768px) {
+    padding: 30px 20px;
+    max-width: 100%;
+  }
 `;
 
 const Title = styled.h1`
@@ -37,6 +42,10 @@ const Title = styled.h1`
   font-size: 2.5rem;
   margin-bottom: 10px;
   letter-spacing: -0.5px;
+  
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
 `;
 
 const Subtitle = styled.p`

@@ -25,11 +25,13 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   if (loading) {
-    return <div className="d-flex justify-content-center align-items-center vh-100">
-      <div className="spinner-border" role="status">
-        <span className="visually-hidden">Loading...</span>
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
       </div>
-    </div>;
+    );
   }
 
   if (!user) {
@@ -39,7 +41,7 @@ const ProtectedRoute = ({ children }) => {
   return (
     <>
       <Header />
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         {children}
       </div>
     </>
