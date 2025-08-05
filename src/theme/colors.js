@@ -6,8 +6,8 @@ export const lightColors = {
   background: '#FFFFFF',  // White background
   surface: '#F8F8F8',  // Light gray background
   accent: '#FF7E47',  // Accent color (coral/orange)
-  text: '#1A1A1A',  // Main text color
-  textSecondary: '#6D6D6D',  // Secondary text color
+  text: '#1A1A1A',  // Main text color - dark for good contrast
+  textSecondary: '#555555',  // Darker secondary text for better visibility
   border: '#E0E0E0',  // Border color
   success: '#4CAF50',  // Success color
   error: '#F44336',  // Error color
@@ -17,7 +17,7 @@ export const lightColors = {
   chatBubbleReceived: '#F0F0F0',  // Received message bubble (light gray)
   chatTextSent: '#1A1A1A',  // Sent message text
   chatTextReceived: '#1A1A1A',  // Received message text
-  chatTime: '#888888',  // Message timestamp color
+  chatTime: '#666666',  // Darker message timestamp color for better visibility
   
   // Button variants
   buttonPrimary: '#FFCD1F',
@@ -40,21 +40,21 @@ export const darkColors = {
   primary: '#FFCD1F',  // Keep Bumble yellow for brand consistency
   primaryDark: '#E5B91C',  // Darker yellow for hover states
   secondary: '#FFFFFF',  // White for text in dark mode
-  background: '#0A0A0A',  // Very dark background
-  surface: '#1A1A1A',  // Darker surface
+  background: '#000000',  // Pure black background for maximum contrast
+  surface: '#0F0F0F',  // Very dark surface
   accent: '#FF7E47',  // Keep accent color
-  text: '#FFFFFF',  // White text
-  textSecondary: '#B0B0B0',  // Light gray for secondary text
-  border: '#2A2A2A',  // Darker border
+  text: '#FFFFFF',  // White text for maximum visibility
+  textSecondary: '#CCCCCC',  // Light gray for secondary text
+  border: '#1A1A1A',  // Dark border
   success: '#4CAF50',  // Success color
   error: '#F44336',  // Error color
   
   // Chat specific colors
   chatBubbleSent: '#FFCD1F',  // Keep yellow for sent messages
-  chatBubbleReceived: '#1A1A1A',  // Darker gray for received messages
+  chatBubbleReceived: '#0F0F0F',  // Very dark gray for received messages
   chatTextSent: '#1A1A1A',  // Dark text on yellow
   chatTextReceived: '#FFFFFF',  // White text on dark gray
-  chatTime: '#888888',  // Message timestamp color
+  chatTime: '#AAAAAA',  // Lighter message timestamp color for better visibility
   
   // Button variants
   buttonPrimary: '#FFCD1F',
@@ -62,12 +62,12 @@ export const darkColors = {
   buttonText: '#1A1A1A',
   
   // Header
-  headerBackground: '#1A1A1A',
+  headerBackground: '#0F0F0F',
   headerText: '#FFFFFF',
   
   // Input fields
-  inputBackground: '#1A1A1A',
-  inputBorder: '#2A2A2A',
+  inputBackground: '#0F0F0F',
+  inputBorder: '#1A1A1A',
   inputFocus: '#FFCD1F',
   inputText: '#FFFFFF'
 };
