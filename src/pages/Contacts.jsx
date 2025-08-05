@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { db } from '../firebase';
 import {
   collection,
@@ -6,16 +6,18 @@ import {
   where,
   doc,
   getDoc,
+  getDocs,
   orderBy,
   onSnapshot,
   updateDoc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { InputGroup, Button, Alert, Spinner } from 'react-bootstrap';
-import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers } from 'react-icons/fi';
+import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers, FiRefreshCw } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
 import { createInvite } from './Invite';
 import {
@@ -53,6 +55,46 @@ const Contacts = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+
+  // Clean up duplicate contacts (utility function)
+  const cleanupDuplicateContacts = useCallback(async () => {
+    try {
+      if (!currentUser) return;
+      
+      const contactsQuery = query(
+        collection(db, 'contacts'),
+        where('userId', '==', currentUser.uid)
+      );
+      
+      const snapshot = await getDocs(contactsQuery);
+      const contactMap = new Map();
+      const duplicates = [];
+      
+      snapshot.forEach((doc) => {
+        const contactData = doc.data();
+        const key = `${contactData.userId}_${contactData.contactId}`;
+        
+        if (contactMap.has(key)) {
+          duplicates.push(doc.id);
+        } else {
+          contactMap.set(key, doc.id);
+        }
+      });
+      
+      // Delete duplicate contacts
+      if (duplicates.length > 0) {
+        console.log(`Found ${duplicates.length} duplicate contacts, cleaning up...`);
+        const batch = writeBatch(db);
+        duplicates.forEach(docId => {
+          batch.delete(doc(db, 'contacts', docId));
+        });
+        await batch.commit();
+        console.log('Duplicate contacts cleaned up successfully');
+      }
+    } catch (error) {
+      console.error('Error cleaning up duplicate contacts:', error);
+    }
+  }, [currentUser]);
 
   // Load contacts and requests
   useEffect(() => {
@@ -164,12 +206,14 @@ const Contacts = () => {
     };
   }, [currentUser, navigate]);
 
-  // Set up invite link
+  // Set up invite link and cleanup duplicates
   useEffect(() => {
     if (currentUser) {
       setInviteLink(`${window.location.origin}/invite/${currentUser.uid}`);
+      // Clean up any existing duplicate contacts
+      cleanupDuplicateContacts();
     }
-  }, [currentUser]);
+  }, [currentUser, cleanupDuplicateContacts]);
 
   // Show loading spinner while auth is loading
   if (authLoading) {
@@ -217,28 +261,50 @@ const Contacts = () => {
       });
       
       if (response === 'accepted') {
-        // Create a contact for both users
-        const contactRef1 = doc(collection(db, 'contacts'));
-        await setDoc(contactRef1, {
-          userId: currentUser.uid,
-          contactId: request.userInfo.uid,
-          displayName: request.userInfo.displayName,
-          photoURL: request.userInfo.photoURL,
-          createdAt: serverTimestamp(),
-          lastChatAt: null,
-          lastMessage: null
-        });
+        // Check if contacts already exist to prevent duplicates
+        const existingContact1Query = query(
+          collection(db, 'contacts'),
+          where('userId', '==', currentUser.uid),
+          where('contactId', '==', request.userInfo.uid)
+        );
         
-        const contactRef2 = doc(collection(db, 'contacts'));
-        await setDoc(contactRef2, {
-          userId: request.userInfo.uid,
-          contactId: currentUser.uid,
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          createdAt: serverTimestamp(),
-          lastChatAt: null,
-          lastMessage: null
-        });
+        const existingContact2Query = query(
+          collection(db, 'contacts'),
+          where('userId', '==', request.userInfo.uid),
+          where('contactId', '==', currentUser.uid)
+        );
+
+        const [existingContact1Snapshot, existingContact2Snapshot] = await Promise.all([
+          getDocs(existingContact1Query),
+          getDocs(existingContact2Query)
+        ]);
+
+        // Only create contacts if they don't already exist
+        if (existingContact1Snapshot.empty) {
+          const contactRef1 = doc(collection(db, 'contacts'));
+          await setDoc(contactRef1, {
+            userId: currentUser.uid,
+            contactId: request.userInfo.uid,
+            displayName: request.userInfo.displayName,
+            photoURL: request.userInfo.photoURL,
+            createdAt: serverTimestamp(),
+            lastChatAt: null,
+            lastMessage: null
+          });
+        }
+        
+        if (existingContact2Snapshot.empty) {
+          const contactRef2 = doc(collection(db, 'contacts'));
+          await setDoc(contactRef2, {
+            userId: request.userInfo.uid,
+            contactId: currentUser.uid,
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+            createdAt: serverTimestamp(),
+            lastChatAt: null,
+            lastMessage: null
+          });
+        }
 
         // Send notification to the other user
         const notificationRef = doc(collection(db, 'notifications'));
@@ -355,6 +421,22 @@ const Contacts = () => {
             </button>
           </div>
           <p className="text-muted small mb-0">Share this link to invite others to chat with you</p>
+          
+          <hr className="my-3" />
+          
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 className="mb-1">Contact Management</h6>
+              <p className="text-muted small mb-0">Clean up duplicate contacts if needed</p>
+            </div>
+            <Button 
+              variant="outline-warning" 
+              size="sm"
+              onClick={cleanupDuplicateContacts}
+            >
+              <FiRefreshCw className="me-1" /> Clean Duplicates
+            </Button>
+          </div>
         </div>
       </div>
     </div>
