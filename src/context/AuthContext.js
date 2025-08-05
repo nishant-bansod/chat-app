@@ -15,18 +15,27 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     console.log('Setting up auth listener');
+    let isMounted = true;
+    
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       console.log('Auth state changed:', firebaseUser ? 'logged in' : 'logged out');
-      setUser(firebaseUser);
-      setLoading(false);
-      setAuthError(null);
+      if (isMounted) {
+        setUser(firebaseUser);
+        setLoading(false);
+        setAuthError(null);
+      }
     }, (error) => {
       console.error('Auth error:', error);
-      setAuthError(error);
-      setLoading(false);
+      if (isMounted) {
+        setAuthError(error);
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const value = {
@@ -38,7 +47,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

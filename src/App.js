@@ -51,7 +51,8 @@ function App() {
 
   // Apply theme class
   React.useEffect(() => {
-    return applyThemeClass();
+    const cleanup = applyThemeClass();
+    return cleanup;
   }, []);
 
   return (
@@ -67,18 +68,6 @@ function App() {
 
 // Separate component to use auth context
 function AppContent({ notifications, removeNotification }) {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.surface }}>
       <Routes>

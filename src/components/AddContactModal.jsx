@@ -1,25 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, ListGroup, InputGroup } from 'react-bootstrap';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 import { FiSearch, FiUserPlus, FiCheck } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 
 function AddContactModal({ show, onHide, onContactAdded }) {
+  const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  // Listen for auth state changes
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
 
   // Clear messages when modal opens/closes
   useEffect(() => {

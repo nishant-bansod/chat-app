@@ -170,21 +170,24 @@ const PasswordToggle = styled(Button)`
 function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isRegister, setIsRegister] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !loading && !hasRedirected) {
       const redirectTo = location.state?.from?.pathname || '/contacts';
+      console.log('Redirecting to:', redirectTo);
+      setHasRedirected(true);
       navigate(redirectTo, { replace: true });
     }
-  }, [user, navigate, location]);
+  }, [user, loading, navigate, location, hasRedirected]);
 
   // Store minimal user data in Firestore
   const saveUser = async (user) => {
@@ -206,7 +209,7 @@ function Login() {
 
   const handleGoogleLogin = async () => {
     setError('');
-    setLoading(true);
+    setIsLoading(true);
     try {
       const result = await signInWithPopup(auth, provider);
       await saveUser(result.user);
@@ -215,7 +218,7 @@ function Login() {
       console.error('Google login error:', err);
       setError(err.message || 'Failed to sign in with Google');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -228,7 +231,7 @@ function Login() {
       console.warn('Missing email or password');
       return;
     }
-    setLoading(true);
+    setIsLoading(true);
     try {
       let result;
       if (isRegister) {
@@ -246,12 +249,25 @@ function Login() {
     } catch (err) {
       console.error('Email login error:', err);
       setError((err && err.message) ? err.message : 'Failed to sign in. Please try again.');
-      // Show alert if error is not visible
-      alert('Login error: ' + ((err && err.message) ? err.message : 'Unknown error'));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
+
+  // Show loading spinner while auth state is being determined
+  if (loading || user) {
+    return (
+      <LoginContainer>
+        <LoginCard>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '200px' }}>
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </LoginCard>
+      </LoginContainer>
+    );
+  }
 
   return (
     <LoginContainer>
@@ -264,7 +280,7 @@ function Login() {
         <StyledButton 
           variant="outline" 
           onClick={handleGoogleLogin}
-          disabled={loading}
+          disabled={isLoading}
           className="btn-outline"
         >
           <FaGoogle /> Continue with Google
@@ -281,7 +297,7 @@ function Login() {
                 placeholder="Choose a username" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
+                disabled={isLoading}
               />
             </FormGroup>
           )}
@@ -324,10 +340,10 @@ function Login() {
           <StyledButton 
             type="submit" 
             variant="primary"
-            disabled={loading}
+            disabled={isLoading}
             className="btn-primary"
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 {isRegister ? 'Creating Account...' : 'Signing In...'}

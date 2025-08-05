@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { db, auth } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 import { 
   collection, addDoc, query, orderBy, 
   onSnapshot, serverTimestamp, where, 
@@ -181,6 +182,7 @@ const EmptyState = styled.div`
 `;
 
 function ChatRoom() {
+  const { user, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -188,13 +190,12 @@ function ChatRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const messagesEndRef = useRef(null);
-  const user = auth.currentUser;
   const navigate = useNavigate();
   const { userId } = useParams();
 
   useEffect(() => {
     if (!user) {
-      navigate('/');
+      navigate('/', { replace: true });
       return;
     }
 
@@ -274,6 +275,29 @@ function ChatRoom() {
     }
   }, [user, userId, navigate]);
 
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Show loading spinner while auth is loading
+  if (authLoading) {
+    return (
+      <ChatContainer>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      </ChatContainer>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    return null;
+  }
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !user || !userId || isSending) return;
@@ -343,11 +367,6 @@ function ChatRoom() {
     if (!timestamp?.toDate) return '';
     return timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   if (error) {
     return (

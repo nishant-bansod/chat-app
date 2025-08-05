@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 import {
   collection,
   query,
@@ -11,8 +11,8 @@ import {
   updateDoc,
   setDoc
 } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { InputGroup, Button, Alert, Spinner } from 'react-bootstrap';
 import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
@@ -40,6 +40,7 @@ const SearchInput = ({ ...props }) => (
 );
 
 const Contacts = () => {
+  const { user: currentUser, loading: authLoading } = useAuth();
   const [inviteLink, setInviteLink] = useState('');
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
@@ -49,92 +50,12 @@ const Contacts = () => {
   const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
-
-  // Listen for auth state changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Format time for last message
-  const formatTimeAgo = (date) => {
-    if (!date) return '';
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) {
-      const minutes = Math.floor(diffInHours * 60);
-      return `${minutes}m`;
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h`;
-    } else if (diffInHours < 168) {
-      return `${Math.floor(diffInHours / 24)}d`;
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
-
-  const respondRequest = async (request, response) => {
-    try {
-      if (!currentUser) throw new Error('No current user');
-      if (response === 'accepted') {
-        // Create a contact for both users
-        const contactRef1 = doc(collection(db, 'contacts'));
-        await setDoc(contactRef1, {
-          userId: currentUser.uid,
-          contactId: request.userInfo.uid,
-          displayName: request.userInfo.displayName,
-          photoURL: request.userInfo.photoURL,
-          createdAt: new Date(),
-          lastChatAt: null,
-          lastMessage: null
-        });
-        const contactRef2 = doc(collection(db, 'contacts'));
-        await setDoc(contactRef2, {
-          userId: request.userInfo.uid,
-          contactId: currentUser.uid,
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          createdAt: new Date(),
-          lastChatAt: null,
-          lastMessage: null
-        });
-      }
-      // Update the request status (only status field, per Firestore rules)
-      await updateDoc(doc(db, 'contactRequests', request.id), {
-        status: response
-      });
-      // Remove from local state
-      setRequests(requests.filter(req => req.id !== request.id));
-    } catch (error) {
-      console.error('Error responding to request:', error, { request, response });
-      setError('Failed to respond to request. Please try again. ' + (error && error.message ? error.message : ''));
-    }
-  };
-
-  // Filter contacts based on search term
-  const filterContacts = (search) => {
-    if (!search.trim()) {
-      setFilteredContacts(contacts);
-      return;
-    }
-    
-    const searchLower = search.toLowerCase();
-    const filtered = contacts.filter(contact => 
-      (contact.userInfo?.displayName || '').toLowerCase().includes(searchLower) ||
-      (contact.userInfo?.email || '').toLowerCase().includes(searchLower)
-    );
-    setFilteredContacts(filtered);
-  };
 
   // Load contacts and requests
   useEffect(() => {
     if (!currentUser) {
-      navigate('/');
+      navigate('/', { replace: true });
       return;
     }
 
@@ -226,6 +147,97 @@ const Contacts = () => {
       setInviteLink(`${window.location.origin}/invite/${currentUser.uid}`);
     }
   }, [currentUser]);
+
+  // Show loading spinner while auth is loading
+  if (authLoading) {
+    return (
+      <ContactsContainer>
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      </ContactsContainer>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!currentUser) {
+    return null;
+  }
+
+  // Format time for last message
+  const formatTimeAgo = (date) => {
+    if (!date) return '';
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      const minutes = Math.floor(diffInHours * 60);
+      return `${minutes}m`;
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h`;
+    } else if (diffInHours < 168) {
+      return `${Math.floor(diffInHours / 24)}d`;
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
+  const respondRequest = async (request, response) => {
+    try {
+      if (!currentUser) throw new Error('No current user');
+      if (response === 'accepted') {
+        // Create a contact for both users
+        const contactRef1 = doc(collection(db, 'contacts'));
+        await setDoc(contactRef1, {
+          userId: currentUser.uid,
+          contactId: request.userInfo.uid,
+          displayName: request.userInfo.displayName,
+          photoURL: request.userInfo.photoURL,
+          createdAt: new Date(),
+          lastChatAt: null,
+          lastMessage: null
+        });
+        const contactRef2 = doc(collection(db, 'contacts'));
+        await setDoc(contactRef2, {
+          userId: request.userInfo.uid,
+          contactId: currentUser.uid,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          createdAt: new Date(),
+          lastChatAt: null,
+          lastMessage: null
+        });
+      }
+      // Update the request status (only status field, per Firestore rules)
+      await updateDoc(doc(db, 'contactRequests', request.id), {
+        status: response
+      });
+      // Remove from local state
+      setRequests(requests.filter(req => req.id !== request.id));
+    } catch (error) {
+      console.error('Error responding to request:', error, { request, response });
+      setError('Failed to respond to request. Please try again. ' + (error && error.message ? error.message : ''));
+    }
+  };
+
+  // Filter contacts based on search term
+  const filterContacts = (search) => {
+    if (!search.trim()) {
+      setFilteredContacts(contacts);
+      return;
+    }
+    
+    const searchLower = search.toLowerCase();
+    const filtered = contacts.filter(contact => 
+      (contact.userInfo?.displayName || '').toLowerCase().includes(searchLower) ||
+      (contact.userInfo?.email || '').toLowerCase().includes(searchLower)
+    );
+    setFilteredContacts(filtered);
+  };
+
+
 
   // Copy invite link to clipboard
   const copyInviteLink = async () => {

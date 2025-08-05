@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 import { 
   doc, 
   getDoc, 
@@ -15,8 +15,8 @@ import {
   addDoc 
 } from 'firebase/firestore';
 import { Container, Card, Button, Alert, Spinner } from 'react-bootstrap';
-import { onAuthStateChanged } from 'firebase/auth';
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 export async function createInvite(currentUser) {
   const invitesRef = collection(db, 'invites');
@@ -33,23 +33,15 @@ export async function createInvite(currentUser) {
 function Invite() {
   const { inviteId } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [inviteData, setInviteData] = useState(null);
   const [error, setError] = useState('');
-  const [currentUser, setCurrentUser] = useState(auth.currentUser);
   
   // Check if users are already contacts
   const [existingContact, setExistingContact] = useState(false);
-
-  // Wait for Firebase Auth to resolve current currentUser
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setCurrentUser(u);
-    });
-    return () => unsub();
-  }, []);
 
   // Memoize the checkExistingContact function with useCallback
   const checkExistingContact = React.useCallback(async (inviterId) => {
@@ -112,12 +104,30 @@ function Invite() {
   useEffect(() => {
     if (currentUser === null) return; // still loading auth
     if (!currentUser) {
-      navigate('/');
+      navigate('/', { replace: true });
       return;
     }
 
     fetchInvite();
   }, [fetchInvite, currentUser, navigate]);
+
+  // Show loading spinner while auth is loading
+  if (authLoading) {
+    return (
+      <Container className="mt-5">
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      </Container>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!currentUser) {
+    return null;
+  }
 
 
 
