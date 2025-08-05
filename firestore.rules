@@ -97,5 +97,20 @@ service cloud.firestore {
         (request.resource.data.status == 'accepted' || 
          request.resource.data.status == 'rejected');
     }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      // Allow users to read their own notifications
+      allow read: if request.auth != null &&
+        resource.data.userId == request.auth.uid;
+        
+      // Allow creating notifications (for contact acceptance)
+      allow create: if request.auth != null;
+        
+      // Allow updating only if you're the notification recipient and only read field
+      allow update: if request.auth != null &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
   }
 }

@@ -51,6 +51,7 @@ const Contacts = () => {
   const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   // Load contacts and requests
@@ -135,10 +136,31 @@ const Contacts = () => {
       setSentRequests(sentList);
     });
 
+    // Listen for notifications
+    const notificationsQuery = query(
+      collection(db, 'notifications'),
+      where('userId', '==', currentUser.uid),
+      where('read', '==', false),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+      snapshot.forEach((doc) => {
+        const notification = doc.data();
+        if (notification.type === 'contact_accepted') {
+          // Show a toast notification
+          setSuccess(`${notification.fromUser.displayName} accepted your contact request!`);
+          // Mark notification as read
+          updateDoc(doc(db, 'notifications', doc.id), { read: true });
+        }
+      });
+    });
+
     return () => {
       unsubscribeContacts();
       unsubscribeIncoming();
       unsubscribeSent();
+      unsubscribeNotifications();
     };
   }, [currentUser, navigate]);
 
@@ -216,6 +238,23 @@ const Contacts = () => {
           createdAt: serverTimestamp(),
           lastChatAt: null,
           lastMessage: null
+        });
+
+        // Send notification to the other user
+        const notificationRef = doc(collection(db, 'notifications'));
+        await setDoc(notificationRef, {
+          userId: request.userInfo.uid, // Send to the person who sent the request
+          type: 'contact_accepted',
+          title: 'Contact Request Accepted',
+          message: `${currentUser.displayName || currentUser.email} accepted your contact request!`,
+          fromUser: {
+            uid: currentUser.uid,
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            photoURL: currentUser.photoURL
+          },
+          read: false,
+          createdAt: serverTimestamp()
         });
       }
       
@@ -338,6 +377,15 @@ const Contacts = () => {
       return (
         <Alert variant="danger" className="my-4">
           {error}
+        </Alert>
+      );
+    }
+
+    if (success) {
+      setTimeout(() => setSuccess(''), 3000);
+      return (
+        <Alert variant="success" className="my-4">
+          {success}
         </Alert>
       );
     }
