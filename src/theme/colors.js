@@ -1,4 +1,4 @@
-export const colors = {
+export const lightColors = {
   // Bumble-inspired color palette
   primary: '#FFCD1F',  // Bumble yellow
   primaryDark: '#E5B91C',  // Darker yellow for hover states
@@ -34,6 +34,46 @@ export const colors = {
   inputFocus: '#FFCD1F',
   inputText: '#1A1A1D'
 };
+
+export const darkColors = {
+  // Dark theme color palette
+  primary: '#FFCD1F',  // Keep Bumble yellow for brand consistency
+  primaryDark: '#E5B91C',  // Darker yellow for hover states
+  secondary: '#FFFFFF',  // White for text in dark mode
+  background: '#121212',  // Dark background
+  surface: '#1E1E1E',  // Dark surface
+  accent: '#FF7E47',  // Keep accent color
+  text: '#FFFFFF',  // White text
+  textSecondary: '#B0B0B0',  // Light gray for secondary text
+  border: '#333333',  // Dark border
+  success: '#4CAF50',  // Success color
+  error: '#F44336',  // Error color
+  
+  // Chat specific colors
+  chatBubbleSent: '#FFCD1F',  // Keep yellow for sent messages
+  chatBubbleReceived: '#2A2A2A',  // Dark gray for received messages
+  chatTextSent: '#1A1A1A',  // Dark text on yellow
+  chatTextReceived: '#FFFFFF',  // White text on dark gray
+  chatTime: '#888888',  // Message timestamp color
+  
+  // Button variants
+  buttonPrimary: '#FFCD1F',
+  buttonPrimaryHover: '#E5B91C',
+  buttonText: '#1A1A1A',
+  
+  // Header
+  headerBackground: '#1E1E1E',
+  headerText: '#FFFFFF',
+  
+  // Input fields
+  inputBackground: '#2A2A2A',
+  inputBorder: '#333333',
+  inputFocus: '#FFCD1F',
+  inputText: '#FFFFFF'
+};
+
+// Default to light theme
+export const colors = lightColors;
 
 export const shadows = {
   small: '0 2px 4px rgba(0,0,0,0.1)',

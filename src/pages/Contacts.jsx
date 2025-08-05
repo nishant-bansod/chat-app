@@ -11,13 +11,15 @@ import {
   onSnapshot,
   updateDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../theme/ThemeProvider';
 import { InputGroup, Button, Alert, Spinner } from 'react-bootstrap';
-import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers, FiRefreshCw } from 'react-icons/fi';
+import { FiUserPlus, FiSearch, FiCheck, FiX, FiClock, FiUserCheck, FiUserX, FiCopy, FiMessageCircle, FiUsers, FiTrash2, FiSun, FiMoon } from 'react-icons/fi';
 import AddContactModal from '../components/AddContactModal';
 import { createInvite } from './Invite';
 import {
@@ -44,6 +46,7 @@ const SearchInput = ({ ...props }) => (
 
 const Contacts = () => {
   const { user: currentUser, loading: authLoading } = useAuth();
+  const { isDarkMode, toggleTheme, colors } = useTheme();
   const [inviteLink, setInviteLink] = useState('');
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
@@ -399,6 +402,21 @@ const Contacts = () => {
     }
   };
 
+  // Delete contact function
+  const deleteContact = async (contactId, contactName) => {
+    try {
+      if (!currentUser) return;
+      
+      if (window.confirm(`Are you sure you want to delete ${contactName || 'this contact'}?`)) {
+        await deleteDoc(doc(db, 'contacts', contactId));
+        setSuccess(`${contactName || 'Contact'} deleted successfully!`);
+      }
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      setError('Failed to delete contact. Please try again.');
+    }
+  };
+
   // Render welcome section with action buttons
   const renderWelcomeSection = () => (
     <div className="mb-4">
@@ -430,22 +448,6 @@ const Contacts = () => {
             </button>
           </div>
           <p className="text-muted small mb-0">Share this link to invite others to chat with you</p>
-          
-          <hr className="my-3" />
-          
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h6 className="mb-1">Contact Management</h6>
-              <p className="text-muted small mb-0">Clean up duplicate contacts if needed</p>
-            </div>
-            <Button 
-              variant="outline-warning" 
-              size="sm"
-              onClick={cleanupDuplicateContacts}
-            >
-              <FiRefreshCw className="me-1" /> Clean Duplicates
-            </Button>
-          </div>
         </div>
       </div>
     </div>
@@ -564,9 +566,21 @@ const Contacts = () => {
                     </small>
                   )}
                 </ContactInfo>
-                {contact.lastChatAt && (
-                  <TimeAgo>{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
-                )}
+                <div className="d-flex align-items-center">
+                  {contact.lastChatAt && (
+                    <TimeAgo className="me-2">{formatTimeAgo(contact.lastChatAt?.toDate())}</TimeAgo>
+                  )}
+                  <ActionButton 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteContact(contact.id, contact.userInfo?.displayName);
+                    }}
+                    title="Delete Contact"
+                    className="text-danger"
+                  >
+                    <FiTrash2 size={16} />
+                  </ActionButton>
+                </div>
               </ContactItem>
             ))}
           </div>
@@ -578,13 +592,32 @@ const Contacts = () => {
   // Render the component
   return (
     <ContactsContainer>
-      <Header>
-        <Title>Contacts</Title>
-        {currentUser && (
-          <div style={{ fontSize: '0.95rem', color: '#6D6D6D', marginTop: 4 }}>
-            Logged in as: <strong>{currentUser.email}</strong>
+      <Header style={{ backgroundColor: colors.headerBackground, color: colors.headerText }}>
+        <div className="d-flex justify-content-between align-items-center w-100">
+          <div>
+            <Title style={{ color: colors.headerText }}>Contacts</Title>
+            {currentUser && (
+              <div style={{ fontSize: '0.95rem', color: colors.textSecondary, marginTop: 4 }}>
+                Logged in as: <strong>{currentUser.email}</strong>
+              </div>
+            )}
           </div>
-        )}
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={toggleTheme}
+            style={{
+              borderColor: colors.primary,
+              color: colors.primary,
+              backgroundColor: 'transparent'
+            }}
+          >
+            {isDarkMode ? <FiSun size={16} /> : <FiMoon size={16} />}
+            <span className="ms-2 d-none d-sm-inline">
+              {isDarkMode ? 'Light' : 'Dark'} Mode
+            </span>
+          </Button>
+        </div>
       </Header>
 
       {renderWelcomeSection()}

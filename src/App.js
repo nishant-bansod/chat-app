@@ -9,7 +9,7 @@ import Invite from './pages/Invite';
 import Contacts from './pages/Contacts';
 import NotificationToast from './components/NotificationToast';
 import { useNotifications } from './hooks/useNotifications';
-import { colors } from './theme/colors';
+import { useTheme } from './theme/ThemeProvider';
 
 // Apply theme class to body for global styles
 const applyThemeClass = () => {
@@ -68,6 +68,8 @@ function App() {
 
 // Separate component to use auth context
 function AppContent({ notifications, removeNotification }) {
+  const { colors } = useTheme();
+  
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: colors.surface }}>
       <Routes>

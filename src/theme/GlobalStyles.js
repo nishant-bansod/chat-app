@@ -1,24 +1,23 @@
 import { createGlobalStyle } from 'styled-components';
-import { colors } from './colors';
 
 export const GlobalStyles = createGlobalStyle`
   :root {
-    --primary: ${colors.primary};
-    --primary-dark: ${colors.primaryDark};
-    --secondary: ${colors.secondary};
-    --background: ${colors.background};
-    --surface: ${colors.surface};
-    --accent: ${colors.accent};
-    --text: ${colors.text};
-    --text-secondary: ${colors.textSecondary};
-    --border: ${colors.border};
-    --success: ${colors.success};
-    --error: ${colors.error};
-    --chat-bubble-sent: ${colors.chatBubbleSent};
-    --chat-bubble-received: ${colors.chatBubbleReceived};
-    --chat-text-sent: ${colors.chatTextSent};
-    --chat-text-received: ${colors.chatTextReceived};
-    --chat-time: ${colors.chatTime};
+    --primary: ${props => props.theme.colors.primary};
+    --primary-dark: ${props => props.theme.colors.primaryDark};
+    --secondary: ${props => props.theme.colors.secondary};
+    --background: ${props => props.theme.colors.background};
+    --surface: ${props => props.theme.colors.surface};
+    --accent: ${props => props.theme.colors.accent};
+    --text: ${props => props.theme.colors.text};
+    --text-secondary: ${props => props.theme.colors.textSecondary};
+    --border: ${props => props.theme.colors.border};
+    --success: ${props => props.theme.colors.success};
+    --error: ${props => props.theme.colors.error};
+    --chat-bubble-sent: ${props => props.theme.colors.chatBubbleSent};
+    --chat-bubble-received: ${props => props.theme.colors.chatBubbleReceived};
+    --chat-text-sent: ${props => props.theme.colors.chatTextSent};
+    --chat-text-received: ${props => props.theme.colors.chatTextReceived};
+    --chat-time: ${props => props.theme.colors.chatTime};
   }
 
   body {

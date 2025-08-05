@@ -7,6 +7,11 @@ export const ContactsContainer = styled.div`
   display: flex;
   flex-direction: column;
   background-color: ${colors.background};
+  
+  @media (max-width: 768px) {
+    height: 100vh;
+    overflow: hidden;
+  }
 `;
 
 export const Header = styled.div`
@@ -17,12 +22,20 @@ export const Header = styled.div`
   box-shadow: ${shadows.small};
   position: relative;
   z-index: 10;
+  
+  @media (max-width: 768px) {
+    padding: 15px;
+  }
 `;
 
 export const Title = styled.h1`
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0;
+  
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 export const SearchContainer = styled.div`
@@ -69,6 +82,10 @@ export const ContactItem = styled(ListGroup.Item)`
     background-color: ${colors.primary}20;
     border-left: 3px solid ${colors.primary};
   }
+  
+  @media (max-width: 768px) {
+    padding: 12px 15px;
+  }
 `;
 
 export const ContactAvatar = styled(Image)`
@@ -78,6 +95,12 @@ export const ContactAvatar = styled(Image)`
   object-fit: cover;
   margin-right: 15px;
   border: 2px solid ${colors.border};
+  
+  @media (max-width: 768px) {
+    width: 45px;
+    height: 45px;
+    margin-right: 12px;
+  }
 `;
 
 export const ContactInfo = styled.div`
@@ -178,5 +201,13 @@ export const AddButton = styled(Button)`
   
   &:active {
     transform: translateY(0);
+  }
+  
+  @media (max-width: 768px) {
+    bottom: 20px;
+    right: 20px;
+    width: 55px;
+    height: 55px;
+    font-size: 1.3rem;
   }
 `;

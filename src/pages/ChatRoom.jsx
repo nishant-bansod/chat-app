@@ -21,6 +21,11 @@ const ChatContainer = styled(Container)`
   display: flex;
   flex-direction: column;
   background-color: ${colors.background};
+  
+  @media (max-width: 768px) {
+    height: 100vh;
+    overflow: hidden;
+  }
 `;
 
 const ChatHeader = styled(Card.Header)`
@@ -41,7 +46,27 @@ const MessageList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 15px;
+    gap: 10px;
+  }
 `;
 
 const MessageBubble = styled.div`
@@ -77,6 +102,12 @@ const MessageBubble = styled.div`
     color: ${colors.chatTextReceived};
     border-bottom-left-radius: ${borderRadius.small};
   `}
+  
+  @media (max-width: 768px) {
+    max-width: 85%;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
 `;
 
 const MessageTime = styled.span`
@@ -92,6 +123,10 @@ const MessageInputContainer = styled.div`
   background-color: ${colors.background};
   border-top: 1px solid ${colors.border};
   box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
 `;
 
 const SendButton = styled(Button)`
