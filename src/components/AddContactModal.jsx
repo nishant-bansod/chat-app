@@ -99,10 +99,10 @@ function AddContactModal({ show, onHide, onContactAdded }) {
         status: 'pending',
         createdAt: serverTimestamp(),
         userInfo: {
-          uid: user.uid,
-          displayName: user.displayName || user.email,
-          email: user.email,
-          photoURL: user.photoURL
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || currentUser.email,
+          email: currentUser.email,
+          photoURL: currentUser.photoURL
         }
       });
       
@@ -113,7 +113,7 @@ function AddContactModal({ show, onHide, onContactAdded }) {
         )
       );
       
-      setSuccess(`Contact request sent to ${user.displayName || user.username}!`);
+      setSuccess(`Contact request sent to ${user.displayName || user.email}!`);
       
       if (onContactAdded) {
         onContactAdded();
