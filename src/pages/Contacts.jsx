@@ -186,16 +186,41 @@ const Contacts = () => {
       orderBy('createdAt', 'desc')
     );
 
-    const unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
-      snapshot.forEach((doc) => {
+    const unsubscribeNotifications = onSnapshot(notificationsQuery, async (snapshot) => {
+      for (const doc of snapshot.docs) {
         const notification = doc.data();
         if (notification.type === 'contact_accepted') {
           // Show a toast notification
           setSuccess(`${notification.fromUser.displayName} accepted your contact request!`);
+          
+          // Create contact for the current user if it doesn't exist
+          if (notification.contactInfo) {
+            const existingContactQuery = query(
+              collection(db, 'contacts'),
+              where('userId', '==', currentUser.uid),
+              where('contactId', '==', notification.contactInfo.contactId)
+            );
+            
+            const existingContactSnapshot = await getDocs(existingContactQuery);
+            
+            if (existingContactSnapshot.empty) {
+              const contactRef = doc(collection(db, 'contacts'));
+              await setDoc(contactRef, {
+                userId: currentUser.uid,
+                contactId: notification.contactInfo.contactId,
+                displayName: notification.contactInfo.displayName,
+                photoURL: notification.contactInfo.photoURL,
+                createdAt: serverTimestamp(),
+                lastChatAt: null,
+                lastMessage: null
+              });
+            }
+          }
+          
           // Mark notification as read
           updateDoc(doc(db, 'notifications', doc.id), { read: true });
         }
-      });
+      }
     });
 
     return () => {
@@ -261,28 +286,19 @@ const Contacts = () => {
       });
       
       if (response === 'accepted') {
-        // Check if contacts already exist to prevent duplicates
-        const existingContact1Query = query(
+        // Check if contact already exists to prevent duplicates
+        const existingContactQuery = query(
           collection(db, 'contacts'),
           where('userId', '==', currentUser.uid),
           where('contactId', '==', request.userInfo.uid)
         );
-        
-        const existingContact2Query = query(
-          collection(db, 'contacts'),
-          where('userId', '==', request.userInfo.uid),
-          where('contactId', '==', currentUser.uid)
-        );
 
-        const [existingContact1Snapshot, existingContact2Snapshot] = await Promise.all([
-          getDocs(existingContact1Query),
-          getDocs(existingContact2Query)
-        ]);
+        const existingContactSnapshot = await getDocs(existingContactQuery);
 
-        // Only create contacts if they don't already exist
-        if (existingContact1Snapshot.empty) {
-          const contactRef1 = doc(collection(db, 'contacts'));
-          await setDoc(contactRef1, {
+        // Only create contact if it doesn't already exist
+        if (existingContactSnapshot.empty) {
+          const contactRef = doc(collection(db, 'contacts'));
+          await setDoc(contactRef, {
             userId: currentUser.uid,
             contactId: request.userInfo.uid,
             displayName: request.userInfo.displayName,
@@ -292,21 +308,8 @@ const Contacts = () => {
             lastMessage: null
           });
         }
-        
-        if (existingContact2Snapshot.empty) {
-          const contactRef2 = doc(collection(db, 'contacts'));
-          await setDoc(contactRef2, {
-            userId: request.userInfo.uid,
-            contactId: currentUser.uid,
-            displayName: currentUser.displayName,
-            photoURL: currentUser.photoURL,
-            createdAt: serverTimestamp(),
-            lastChatAt: null,
-            lastMessage: null
-          });
-        }
 
-        // Send notification to the other user
+        // Send notification to the other user with contact info
         const notificationRef = doc(collection(db, 'notifications'));
         await setDoc(notificationRef, {
           userId: request.userInfo.uid, // Send to the person who sent the request
@@ -317,6 +320,12 @@ const Contacts = () => {
             uid: currentUser.uid,
             displayName: currentUser.displayName,
             email: currentUser.email,
+            photoURL: currentUser.photoURL
+          },
+          contactInfo: {
+            userId: request.userInfo.uid,
+            contactId: currentUser.uid,
+            displayName: currentUser.displayName,
             photoURL: currentUser.photoURL
           },
           read: false,
